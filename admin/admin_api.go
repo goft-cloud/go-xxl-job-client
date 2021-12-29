@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
 func ApiCallback(address string, accessToken map[string]string, callbackParam []*transport.HandleCallbackParam, timeout time.Duration) (respMap map[string]interface{}, err error) {

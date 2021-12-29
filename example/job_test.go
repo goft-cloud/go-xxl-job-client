@@ -4,8 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2"
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 )
 
 func JobTest(ctx context.Context) error {

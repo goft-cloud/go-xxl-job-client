@@ -3,7 +3,7 @@ package option
 import (
 	"time"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 )
 
 const (
@@ -17,31 +17,32 @@ const (
 type Option func(*ClientOptions)
 
 type ClientOptions struct {
-	// xxl admin 地址
+	// AdminAddr xxl admin 地址
 	AdminAddr []string
 
-	// token
+	// AccessToken token
 	AccessToken string
 
 	// LogBasePath the job logs base dir path.
 	LogBasePath string
 
-	// 执行期名
+	// AppName 执行器名
 	AppName string
 
-	// 执行器端口
+	// Port client 执行器端口
 	Port int
 
-	// 开启http协议
+	// EnableHttp 开启http协议
 	EnableHttp bool
 
-	// 请求admin超时时间
+	// Timeout 请求admin超时时间
 	Timeout time.Duration
 
-	// 执行器续约时间（超过30秒不续约admin会移除执行器，请设置到30秒以内）
+	// BeatTime 执行器续约时间（超过30秒不续约admin会移除执行器，请设置到30秒以内）
 	BeatTime time.Duration
 }
 
+// NewClientOptions instance
 func NewClientOptions(opts ...Option) ClientOptions {
 	options := ClientOptions{
 		AdminAddr:   []string{defaultAdminAddr},
@@ -52,6 +53,7 @@ func NewClientOptions(opts ...Option) ClientOptions {
 		BeatTime:    defaultBeatTime,
 		LogBasePath: constants.BasePath,
 	}
+
 	for _, o := range opts {
 		o(&options)
 	}
@@ -72,41 +74,42 @@ func WithAdminAddress(addrs ...string) Option {
 	}
 }
 
-// xxl admin accessToke
+// WithAccessToken xxl admin accessToke
 func WithAccessToken(token string) Option {
 	return func(o *ClientOptions) {
 		o.AccessToken = token
 	}
 }
 
-// app name
+// WithAppName app name
 func WithAppName(appName string) Option {
 	return func(o *ClientOptions) {
 		o.AppName = appName
 	}
 }
 
-// xxl client port
+// WithClientPort xxl client port
 func WithClientPort(port int) Option {
 	return func(o *ClientOptions) {
 		o.Port = port
 	}
 }
 
-// xxl admin request timeout
+// WithAdminTimeout xxl admin request timeout
 func WithAdminTimeout(timeout time.Duration) Option {
 	return func(o *ClientOptions) {
 		o.Timeout = timeout
 	}
 }
 
-// xxl admin renew time
+// WithBeatTime xxl admin renew time
 func WithBeatTime(beatTime time.Duration) Option {
 	return func(o *ClientOptions) {
 		o.BeatTime = beatTime
 	}
 }
 
+// WithEnableHttp option
 func WithEnableHttp(enable bool) Option {
 	return func(o *ClientOptions) {
 		o.EnableHttp = enable

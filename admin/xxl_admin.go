@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/executor"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/executor"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
 type XxlAdminServer struct {

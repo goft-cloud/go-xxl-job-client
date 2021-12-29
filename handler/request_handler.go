@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
 // RequestHandler interface

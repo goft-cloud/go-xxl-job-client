@@ -7,9 +7,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
-	"github.com/feixiaobo/go-xxl-job-client/v2/queue"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/queue"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
 type JobHandlerFunc func(ctx context.Context) error
@@ -101,6 +101,7 @@ func (j *JobHandler) HasRunning(jobId int32) bool {
 	return false
 }
 
+// PutJobToQueue push job to queue and run it.
 func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) {
 	qu, has := j.QueueMap[trigger.JobId] // map value是地址，读不加锁
 	if has {
@@ -108,15 +109,18 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 		if err != nil {
 			return err
 		}
+
 		err = qu.Queue.Put(runParam)
 		if err == nil {
 			qu.StartJob()
 			return err
 		}
+
 		return err
 	}
 
-	j.Lock() // 任务map初始化锁
+	// 任务map初始化锁
+	j.Lock()
 	defer j.Unlock()
 
 	jobQueue := &JobQueue{
@@ -124,19 +128,21 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 		JobId:    trigger.JobId,
 		Callback: j.CallbackFunc,
 	}
+
+	// use job handler.
 	if trigger.ExecutorHandler != "" {
 		if j.jobMap == nil && len(j.jobMap) <= 0 {
 			return errors.New("bean job handler not found")
 		}
+
 		fun, ok := j.jobMap[trigger.ExecutorHandler]
 		if !ok {
 			return errors.New("bean job handler not found")
 		}
 
-		jobQueue.ExecuteHandler = &BeanHandler{
-			RunFunc: fun,
-		}
+		jobQueue.ExecuteHandler = &BeanHandler{RunFunc: fun}
 	} else {
+		// use script handler
 		jobQueue.ExecuteHandler = &ScriptHandler{}
 	}
 
@@ -157,28 +163,30 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 }
 
 func (j *JobHandler) cancelJob(jobId int32) {
-	queue, has := j.QueueMap[jobId]
+	jobQueue, has := j.QueueMap[jobId]
 	if has {
 		log.Print("job be canceled, id:", jobId)
-		res := queue.StopJob()
+		res := jobQueue.StopJob()
 		if res {
-			if queue.CurrentJob != nil && queue.CurrentJob.CurrentCancelFunc != nil {
-				queue.CurrentJob.CurrentCancelFunc()
+			if jobQueue.CurrentJob != nil && jobQueue.CurrentJob.CurrentCancelFunc != nil {
+				jobQueue.CurrentJob.CurrentCancelFunc()
 
 				go func() {
 					jobParam := make(map[string]map[string]interface{})
 					logParam := make(map[string]interface{})
-					logParam["logId"] = queue.CurrentJob.LogId
+					logParam["logId"] = jobQueue.CurrentJob.LogId
 					logParam["jobId"] = jobId
-					logParam["jobName"] = queue.CurrentJob.JobName
-					logParam["jobFunc"] = queue.CurrentJob.JobTag
+					logParam["jobName"] = jobQueue.CurrentJob.JobName
+					logParam["jobFunc"] = jobQueue.CurrentJob.JobTag
 					jobParam["logParam"] = logParam
+
 					ctx := context.WithValue(context.Background(), "jobParam", jobParam)
 					logger.Info(ctx, "job canceled by admin!")
 				}()
 			}
-			if queue.Queue != nil {
-				queue.Queue.Clear()
+
+			if jobQueue.Queue != nil {
+				jobQueue.Queue.Clear()
 			}
 		}
 	}

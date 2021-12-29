@@ -7,10 +7,11 @@ import (
 	"sync"
 
 	hessian "github.com/apache/dubbo-go-hessian2"
-	"github.com/feixiaobo/go-xxl-job-client/v2/admin"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/admin"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
+// RequestProcess struct
 type RequestProcess struct {
 	sync.RWMutex
 
@@ -21,6 +22,7 @@ type RequestProcess struct {
 	ReqHandler RequestHandler
 }
 
+// NewRequestProcess create object.
 func NewRequestProcess(adminServer *admin.XxlAdminServer, handler RequestHandler) *RequestProcess {
 	requestHandler := &RequestProcess{
 		adminServer: adminServer,
@@ -30,6 +32,7 @@ func NewRequestProcess(adminServer *admin.XxlAdminServer, handler RequestHandler
 		QueueMap:     make(map[int32]*JobQueue),
 		CallbackFunc: requestHandler.jobRunCallback,
 	}
+
 	requestHandler.JobHandler = jobHandler
 	return requestHandler
 }
@@ -39,46 +42,47 @@ func (j *RequestProcess) RegisterJob(jobName string, function JobHandlerFunc) {
 }
 
 func (j *RequestProcess) pushJob(trigger *transport.TriggerParam) {
-	returnt := transport.ReturnT{
+	returns := transport.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
 	}
 
 	err := j.JobHandler.PutJobToQueue(trigger)
 	if err != nil {
-		returnt.Code = http.StatusInternalServerError
-		returnt.Content = err.Error()
+		returns.Code = http.StatusInternalServerError
+		returns.Content = err.Error()
 		callback := &transport.HandleCallbackParam{
 			LogId:         trigger.LogId,
 			LogDateTim:    trigger.LogDateTime,
-			ExecuteResult: returnt,
+			ExecuteResult: returns,
 		}
+
 		j.adminServer.CallbackAdmin([]*transport.HandleCallbackParam{callback})
 	}
 }
 
 func (r *RequestProcess) jobRunCallback(trigger *JobRunParam, runErr error) {
-	returnt := transport.ReturnT{
+	returns := transport.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
 	}
 
 	if runErr != nil {
-		returnt.Code = http.StatusInternalServerError
-		returnt.Content = runErr.Error()
+		returns.Code = http.StatusInternalServerError
+		returns.Content = runErr.Error()
 	}
 
 	callback := &transport.HandleCallbackParam{
 		LogId:         trigger.LogId,
 		LogDateTim:    trigger.LogDateTime,
-		ExecuteResult: returnt,
+		ExecuteResult: returns,
 	}
 	r.adminServer.CallbackAdmin([]*transport.HandleCallbackParam{callback})
 }
 
 func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res []byte, err error) {
 	response := transport.XxlRpcResponse{}
-	returnt := transport.ReturnT{
+	returns := transport.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
 	}
@@ -86,8 +90,8 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 	isOld := false
 	reqId, accessToken, methodName, err := j.ReqHandler.ParseParam(ctx, r)
 	if err != nil {
-		returnt.Code = http.StatusInternalServerError
-		returnt.Msg = err.Error()
+		returns.Code = http.StatusInternalServerError
+		returns.Msg = err.Error()
 	} else {
 		isOld = reqId != ""
 		isContinue := reqId == ""
@@ -99,8 +103,8 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 		if isContinue {
 			jt := j.adminServer.GetToken()
 			if accessToken != jt {
-				returnt.Code = http.StatusInternalServerError
-				returnt.Msg = "access token error"
+				returns.Code = http.StatusInternalServerError
+				returns.Msg = "access token error"
 			} else {
 				if methodName != "beat" {
 					mn := j.ReqHandler.MethodName(ctx, r)
@@ -109,17 +113,17 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 						jobId, err := j.ReqHandler.IdleBeat(ctx, r)
 						if err == nil {
 							if j.JobHandler.HasRunning(jobId) {
-								returnt.Content = http.StatusInternalServerError
-								returnt.Content = "the server busy"
+								returns.Content = http.StatusInternalServerError
+								returns.Content = "the server busy"
 							}
 						} else {
-							returnt.Content = http.StatusInternalServerError
-							returnt.Content = err.Error()
+							returns.Content = http.StatusInternalServerError
+							returns.Content = err.Error()
 						}
 					case "log":
 						log, err := j.ReqHandler.Log(ctx, r)
 						if err == nil {
-							returnt.Content = log
+							returns.Content = log
 						}
 					case "kill":
 						jobId, err := j.ReqHandler.Kill(ctx, r)
@@ -139,7 +143,7 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 
 	var bytes []byte
 	if isOld {
-		response.Result = returnt
+		response.Result = returns
 		e := hessian.NewEncoder()
 		err = e.Encode(response)
 		if err != nil {
@@ -147,7 +151,7 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 		}
 		bytes = e.Buffer()
 	} else {
-		bs, err := json.Marshal(&returnt)
+		bs, err := json.Marshal(&returns)
 		if err != nil {
 			return nil, err
 		}

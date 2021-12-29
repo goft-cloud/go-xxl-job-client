@@ -1,6 +1,8 @@
 # go-xxl-job-client
 
-## xxl-job go 客户端版
+xxl-job go 客户端版
+
+> 项目 Forks https://github.com/feixiaobo/go-xxl-job-client
 
 ## 介绍
 
@@ -23,15 +25,15 @@ xxj-job 是一个 Java 实现的轻量级分布式任务调度平台，具体实
 
 ### (1) 引入 go 客户端依赖
 
-```
-go get github.com/feixiaobo/go-xxl-job-client/v2
+```bash
+go get github.com/goft-cloud/go-xxl-job-client/v2
 ```
 
 ### (2) 在 main 方法中构建客户端 client，注册任务，启动端口
 
 #### (1) 实现任务
 
-```
+```go
 func XxlJobTest(ctx context.Context) error {
 	logger.Info(ctx, "golang job run success >>>>>>>>>>>>>>")
 	logger.Info(ctx, "the input param:", xxl.GetParam(ctx, "name"))
@@ -41,12 +43,13 @@ func XxlJobTest(ctx context.Context) error {
 
 #### (2) 注册执行，任务，启动项目（可参考 example 目录）
 
-```
+```go 
+   // 构建客户端
 	client := xxl.NewXxlClient(
 	        option.WithAppName("go-example"),
                 option.WithEnableHttp(true), //xxl_job v2.2.0版本及以后
 		option.WithClientPort(8083),
-	) //构建客户端
+	)
 	client.RegisterJob("testJob", JobTest) //注册任务
 	client.Run() //启动客户端
 ```
@@ -56,25 +59,26 @@ func XxlJobTest(ctx context.Context) error {
 
 #### (3) 在 xxl-job-admin 后台管理页面添加执行器
 
-![](https://github.com/feixiaobo/images/blob/master/1577631644200.jpg)
+![add-executor](example/images/add-executor.png)
 
 - appName 为客户注册执行器时的名字
 - 注册方式选择自动注册
 
 #### (4) 在 xxl-job-admin 后台管理页面添加任务
 
-![](https://github.com/feixiaobo/images/blob/master/1577631684132.jpg)
+![add-task-use-job-handler](example/images/add-task-use-job-handler.png)
 
 - JobHandler 为注册任务时的 name
 - 执行器选择刚刚添加的执行器
 - 运行模式默认 BEAN 模式,可选择其他脚本模式（不支持 GLUE(Java)）
 
 添加完成后启动在任务管理菜单中查看任务
-![](https://github.com/feixiaobo/images/blob/master/1577632360005.jpg)
+
+![see-task-logs.png](example/images/see-task-logs.png)
 
 ## 日志输出及参数传递
 
-- go-xxl-job-client 自己实现了日志输出，使用 github.com/feixiaobo/go-xxl-job-client/v2/logger 包输出日志，因为 golang 不支持像 Java 的
+- go-xxl-job-client 自己实现了日志输出，使用 github.com/goft-cloud/go-xxl-job-client/v2/logger 包输出日志，因为 golang 不支持像 Java 的
   ThreadLocal 一样的线程变量，已无法获取到 golang 的协程 id,所以日志输出依赖的内容已存到 context 上下文遍历中，故 log 需要使用 context 变量。可参考任务配置中的日志输出,
 
 ```

@@ -1,4 +1,4 @@
-module github.com/feixiaobo/go-xxl-job-client/v2
+module github.com/goft-cloud/go-xxl-job-client/v2
 
 go 1.14
 

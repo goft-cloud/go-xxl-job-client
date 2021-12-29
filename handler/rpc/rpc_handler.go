@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
-	"github.com/feixiaobo/go-xxl-job-client/v2/utils"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/utils"
 )
 
 type RpcRequestHandler struct {

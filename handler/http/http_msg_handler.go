@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dubbogo/getty"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
 const (

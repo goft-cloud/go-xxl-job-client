@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 )
 
 var logBasPath string

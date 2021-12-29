@@ -5,15 +5,15 @@ import (
 
 	"github.com/apache/dubbo-go-hessian2"
 	"github.com/dubbogo/getty"
-	"github.com/feixiaobo/go-xxl-job-client/v2/admin"
-	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
-	executor2 "github.com/feixiaobo/go-xxl-job-client/v2/executor"
-	"github.com/feixiaobo/go-xxl-job-client/v2/handler"
-	"github.com/feixiaobo/go-xxl-job-client/v2/handler/http"
-	"github.com/feixiaobo/go-xxl-job-client/v2/handler/rpc"
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
-	"github.com/feixiaobo/go-xxl-job-client/v2/option"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/admin"
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
+	executor2 "github.com/goft-cloud/go-xxl-job-client/v2/executor"
+	"github.com/goft-cloud/go-xxl-job-client/v2/handler"
+	"github.com/goft-cloud/go-xxl-job-client/v2/handler/http"
+	"github.com/goft-cloud/go-xxl-job-client/v2/handler/rpc"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/option"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
 type XxlClient struct {
@@ -118,6 +118,7 @@ func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
 	return shardingIdx, shardingTotal
 }
 
+// Run start and run client.
 func (c *XxlClient) Run() error {
 	c.requestHandler.RegisterExecutor()
 
@@ -130,10 +131,12 @@ func (c *XxlClient) Run() error {
 	return nil
 }
 
+// RegisterJob add job handler.
 func (c *XxlClient) RegisterJob(jobName string, function handler.JobHandlerFunc) {
 	c.requestHandler.RegisterJob(jobName, function)
 }
 
-func (c *XxlClient) SetLogger(logger getty.Logger) {
+// SetGettyLogger set logger to getty.
+func (c *XxlClient) SetGettyLogger(logger getty.Logger) {
 	getty.SetLogger(logger)
 }

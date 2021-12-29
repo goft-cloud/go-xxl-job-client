@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 	"github.com/pkg/errors"
 )
 
