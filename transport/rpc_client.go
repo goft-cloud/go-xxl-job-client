@@ -1,9 +1,10 @@
 package transport
 
 import (
-	"github.com/dubbogo/getty"
 	"log"
 	"sync"
+
+	"github.com/dubbogo/getty"
 )
 
 type GettyRPCClient struct {

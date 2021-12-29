@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )

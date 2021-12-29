@@ -2,10 +2,12 @@ package handler
 
 import (
 	"context"
+
 	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )
 
+// RequestHandler interface
 type RequestHandler interface {
 	MethodName(ctx context.Context, r interface{}) string
 	ParseParam(ctx context.Context, r interface{}) (reqId, accessToken, methodName string, err error)

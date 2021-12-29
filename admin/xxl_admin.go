@@ -1,12 +1,13 @@
 package admin
 
 import (
-	"github.com/feixiaobo/go-xxl-job-client/v2/executor"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/feixiaobo/go-xxl-job-client/v2/executor"
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )
 
 type XxlAdminServer struct {
@@ -43,16 +44,18 @@ func NewAdminServer(addresses []string, timeout, beatTime time.Duration, executo
 		executor: executor,
 	}
 
-	addressMap := sync.Map{}
+	// addressMap := sync.Map{}
 	for _, add := range addresses {
 		address := &Address{
 			Valid:       0,
 			RequestTime: time.Now().Unix(),
 		}
-		addressMap.Store(add, address)
+
+		// addressMap.Store(add, address)
+		s.Addresses.Store(add, address)
 	}
 
-	s.Addresses = addressMap
+	// s.Addresses = addressMap
 	return s
 }
 
@@ -100,14 +103,14 @@ func (s *XxlAdminServer) CallbackAdmin(callbackParam []*transport.HandleCallback
 	}
 }
 
-//使用有效地址请求，没有有效地址遍历调用
+// 使用有效地址请求，没有有效地址遍历调用
 func (s *XxlAdminServer) requestAdminApi(op func(string, interface{}) bool, param interface{}) bool {
 	reqTime := time.Now().Unix()
 	reqSuccess := false
 	s.Addresses.Range(func(key, value interface{}) bool {
 		k := key.(string)
 		v := value.(*Address)
-		if v.Valid == 0 || v.Valid == 1 { //admin地址没有请求过或者有效时直接使用该地址
+		if v.Valid == 0 || v.Valid == 1 { // admin地址没有请求过或者有效时直接使用该地址
 			reqSuccess = op(k, param)
 			if reqSuccess {
 				if v.Valid == 0 {
@@ -117,7 +120,7 @@ func (s *XxlAdminServer) requestAdminApi(op func(string, interface{}) bool, para
 			} else {
 				s.setAddressValid(k, -1)
 			}
-		} else if reqTime-v.RequestTime > requestTime { //地址无效且上次请求时间少于10秒内暂时跳过
+		} else if reqTime-v.RequestTime > requestTime { // 地址无效且上次请求时间少于10秒内暂时跳过
 			reqSuccess = op(k, param)
 			if reqSuccess {
 				s.setAddressValid(k, 1)
@@ -129,7 +132,7 @@ func (s *XxlAdminServer) requestAdminApi(op func(string, interface{}) bool, para
 		return true
 	})
 
-	if !reqSuccess { //遍历所有有效admin地址仍然没有有效请求时
+	if !reqSuccess { // 遍历所有有效admin地址仍然没有有效请求时
 		s.Addresses.Range(func(key, value interface{}) bool {
 			k := key.(string)
 			v := value.(*Address)

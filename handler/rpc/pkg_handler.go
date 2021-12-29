@@ -3,10 +3,11 @@ package rpc
 import (
 	"bytes"
 	"errors"
+	"strings"
+
 	"github.com/apache/dubbo-go-hessian2"
 	"github.com/dubbogo/getty"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
-	"strings"
 )
 
 const (
@@ -34,7 +35,7 @@ func (h *PackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, 
 	var res []interface{}
 	length := len(data)
 
-	if h.pkgHandlerRes.Valid { //粘包
+	if h.pkgHandlerRes.Valid { // 粘包
 		var buffer bytes.Buffer
 		buffer.Write(h.pkgHandlerRes.LastPkg)
 		buffer.Write(data)
@@ -43,13 +44,13 @@ func (h *PackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, 
 		h.pkgHandlerRes.LastPkg = nil
 	}
 
-	str := string(data[:]) //需要分包
+	str := string(data[:]) // 需要分包
 	strs := strings.Split(str, pkgSplitStr)
 	splitLen := len(strs) - 1
 	if splitLen >= 1 {
 		for index, s := range strs {
 			if index > 1 || (index == 1 && !h.pkgHandlerRes.LastSuccess) {
-				pos := strings.Index(s, "\r\n\r\n") //去掉http头部
+				pos := strings.Index(s, "\r\n\r\n") // 去掉http头部
 				success := false
 				if pos != -1 {
 					resbyte := []byte(s[pos+4:])
@@ -72,7 +73,7 @@ func (h *PackageHandler) Write(ss getty.Session, p interface{}) ([]byte, error) 
 }
 
 func (h *PackageHandler) unpacks(s string, index, splitLen, length int, success bool) {
-	//位于最后一段字节且总字节长度超过最大长度时，最后一段字节可能是下一个包的前半部分
+	// 位于最后一段字节且总字节长度超过最大长度时，最后一段字节可能是下一个包的前半部分
 	if index == splitLen && length >= maxReadBufLen {
 		var buffer bytes.Buffer
 		buffer.WriteString("POST")

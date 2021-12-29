@@ -3,12 +3,13 @@ package handler
 import (
 	"context"
 	"errors"
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
-	"github.com/feixiaobo/go-xxl-job-client/v2/queue"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"log"
 	"sync"
 	"sync/atomic"
+
+	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
+	"github.com/feixiaobo/go-xxl-job-client/v2/queue"
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )
 
 type JobHandlerFunc func(ctx context.Context) error
@@ -18,7 +19,7 @@ type JobQueue struct {
 	GlueType string
 	ExecuteHandler
 	CurrentJob *JobRunParam
-	Run        int32 //0 stop, 1 run
+	Run        int32 // 0 stop, 1 run
 	Queue      *queue.Queue
 	Callback   func(trigger *JobRunParam, runErr error)
 }
@@ -101,7 +102,7 @@ func (j *JobHandler) HasRunning(jobId int32) bool {
 }
 
 func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) {
-	qu, has := j.QueueMap[trigger.JobId] //map value是地址，读不加锁
+	qu, has := j.QueueMap[trigger.JobId] // map value是地址，读不加锁
 	if has {
 		runParam, err := qu.ParseJob(trigger)
 		if err != nil {
@@ -115,7 +116,7 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 		return err
 	}
 
-	j.Lock() //任务map初始化锁
+	j.Lock() // 任务map初始化锁
 	defer j.Unlock()
 
 	jobQueue := &JobQueue{

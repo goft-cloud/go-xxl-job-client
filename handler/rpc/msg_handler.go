@@ -2,11 +2,12 @@ package rpc
 
 import (
 	"context"
-	"github.com/dubbogo/getty"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/dubbogo/getty"
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )
 
 const (

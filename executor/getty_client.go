@@ -2,13 +2,14 @@ package executor
 
 import (
 	"fmt"
-	"github.com/dubbogo/getty"
-	"github.com/dubbogo/getty/demo/util"
-	"github.com/dubbogo/gost/sync"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/dubbogo/getty"
+	"github.com/dubbogo/getty/demo/util"
+	"github.com/dubbogo/gost/sync"
 )
 
 const (
@@ -85,7 +86,7 @@ func (c *GettyClient) initialSession(session getty.Session) (err error) {
 	if err = tcpConn.SetReadBuffer(ReadBufferSize); err != nil {
 		return err
 	}
-	if err = tcpConn.SetWriteBuffer(writeBufferSize); err != nil { //考虑查看日志时候返回数据可能会多，会不会太小？
+	if err = tcpConn.SetWriteBuffer(writeBufferSize); err != nil { // 考虑查看日志时候返回数据可能会多，会不会太小？
 		return err
 	}
 

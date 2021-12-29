@@ -91,7 +91,7 @@ func (RegistryParam) JavaClassName() string {
 	return "com.xxl.job.core.biz.model.RegistryParam"
 }
 
-//xxl-job v2.2
+// xxl-job v2.2
 type LogRequest struct {
 	LogDateTim  int64 `json:"logDateTim"`
 	LogId       int64 `json:"logId"`

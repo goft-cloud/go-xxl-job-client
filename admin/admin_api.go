@@ -3,10 +3,11 @@ package admin
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )
 
 func ApiCallback(address string, accessToken map[string]string, callbackParam []*transport.HandleCallbackParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
@@ -23,7 +24,7 @@ func ApiCallback(address string, accessToken map[string]string, callbackParam []
 	if len(accessToken) > 0 {
 		for k, v := range accessToken {
 			request.Header.Set(k, v)
-			//request.Header.Set("XXL-RPC-ACCESS-TOKEN", accessToken)
+			// request.Header.Set("XXL-RPC-ACCESS-TOKEN", accessToken)
 		}
 	}
 	client := http.Client{

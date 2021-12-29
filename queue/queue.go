@@ -49,14 +49,14 @@ func (q *Queue) Put(item interface{}) error {
 	return nil
 }
 
-//保证单协程执行，不加锁
+// 保证单协程执行，不加锁
 func (q *Queue) Poll() (has bool, item interface{}) {
 	node := q.Head.Next
 	if node == nil {
 		return false, nil
 	}
 	res := node.Item
-	node.Item = nil //help GC
+	node.Item = nil // help GC
 	q.Head = node
 	atomic.AddInt32(&q.Count, -1)
 	return true, res

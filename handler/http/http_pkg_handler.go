@@ -2,9 +2,10 @@ package http
 
 import (
 	"bytes"
+	"strings"
+
 	"github.com/dubbogo/getty"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
-	"strings"
 )
 
 const (
@@ -30,7 +31,7 @@ func (h *HttpPackageHandler) Read(ss getty.Session, data []byte) (interface{}, i
 	var res []*transport.HttpRequestPkg
 	length := len(data)
 
-	if h.pkgHandlerRes.Valid { //粘包
+	if h.pkgHandlerRes.Valid { // 粘包
 		var buffer bytes.Buffer
 		buffer.Write(h.pkgHandlerRes.LastPkg)
 		buffer.Write(data)
@@ -39,7 +40,7 @@ func (h *HttpPackageHandler) Read(ss getty.Session, data []byte) (interface{}, i
 		h.pkgHandlerRes.LastPkg = nil
 	}
 
-	str := string(data[:]) //需要分包
+	str := string(data[:]) // 需要分包
 	strs := strings.Split(str, pkgSplitStr)
 	if len(strs) > 0 {
 		for _, s := range strs {

@@ -3,11 +3,12 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"sync"
+
 	hessian "github.com/apache/dubbo-go-hessian2"
 	"github.com/feixiaobo/go-xxl-job-client/v2/admin"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
-	"net/http"
-	"sync"
 )
 
 type RequestProcess struct {
@@ -90,7 +91,7 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 	} else {
 		isOld = reqId != ""
 		isContinue := reqId == ""
-		if reqId != "" && "BEAT_PING_PONG" != reqId { //老版本,处理非心跳请求
+		if reqId != "" && "BEAT_PING_PONG" != reqId { // 老版本,处理非心跳请求
 			response.RequestId = reqId
 			isContinue = true
 		}
