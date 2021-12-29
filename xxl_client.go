@@ -2,6 +2,7 @@ package xxl
 
 import (
 	"context"
+
 	"github.com/apache/dubbo-go-hessian2"
 	"github.com/dubbogo/getty"
 	"github.com/feixiaobo/go-xxl-job-client/v2/admin"
@@ -36,18 +37,22 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		executor,
 	)
 
+	// set log path.
+	logger.SetLogBasePath(clientOps.LogBasePath)
+
 	var requestHandler *handler.RequestProcess
 	var gettyClient *executor2.GettyClient
 	if clientOps.EnableHttp {
 		adminServer.AccessToken = map[string]string{
 			"XXL-JOB-ACCESS-TOKEN": clientOps.AccessToken,
 		}
+
 		requestHandler = handler.NewRequestProcess(adminServer, &http.HttpRequestHandler{})
 		executor.Protocol = constants.HttpProtocol
 		gettyClient = executor2.NewGettyClient(http.NewHttpPackageHandler(),
 			http.NewHttpMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess))
 	} else {
-		//register java POJO
+		// register java POJO
 		hessian.RegisterPOJO(&transport.XxlRpcRequest{})
 		hessian.RegisterPOJO(&transport.TriggerParam{})
 		hessian.RegisterPOJO(&transport.Beat{})
@@ -60,12 +65,14 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		adminServer.AccessToken = map[string]string{
 			"XXL-RPC-ACCESS-TOKEN": clientOps.AccessToken,
 		}
+
 		requestHandler = handler.NewRequestProcess(adminServer, &rpc.RpcRequestHandler{})
 		gettyClient = &executor2.GettyClient{
 			PkgHandler:    rpc.NewPackageHandler(),
 			EventListener: rpc.NewRpcMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess),
 		}
 	}
+
 	executor.SetClient(gettyClient)
 
 	return &XxlClient{
@@ -107,13 +114,20 @@ func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
 			}
 		}
 	}
+
 	return shardingIdx, shardingTotal
 }
 
-func (c *XxlClient) Run() {
+func (c *XxlClient) Run() error {
 	c.requestHandler.RegisterExecutor()
-	logger.InitLogPath()
+
+	err := logger.InitLogPath()
+	if err != nil {
+		return err
+	}
+
 	c.executor.Run(c.requestHandler.JobHandler.BeanJobLength())
+	return nil
 }
 
 func (c *XxlClient) RegisterJob(jobName string, function handler.JobHandlerFunc) {

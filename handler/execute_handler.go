@@ -59,14 +59,16 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *Job
 		return jobParam, errors.New(msg)
 	}
 
-	path := fmt.Sprintf("%s%d_%d%s", constants.GlueSourcePath, trigger.JobId, trigger.GlueUpdatetime, suffix)
+	// path := fmt.Sprintf("%s%d_%d%s", constants.GlueSourcePath, trigger.JobId, trigger.GlueUpdatetime, suffix)
+	path := fmt.Sprintf("%s%d_%d%s", logger.GlueSourcePath(), trigger.JobId, trigger.GlueUpdatetime, suffix)
 	_, err = os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		s.Lock()
 		defer s.Unlock()
 		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0750)
 		if err != nil && os.IsNotExist(err) {
-			err = os.MkdirAll(constants.GlueSourcePath, os.ModePerm)
+			// err = os.MkdirAll(constants.GlueSourcePath, os.ModePerm)
+			err = os.MkdirAll(logger.GlueSourcePath(), os.ModePerm)
 			if err == nil {
 				file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0750)
 				if err != nil {

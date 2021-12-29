@@ -6,12 +6,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
 	"io"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
 )
+
+var logBasPath string
 
 type LogResult struct {
 	FromLineNum int32  `json:"fromLineNum"`
@@ -22,6 +25,21 @@ type LogResult struct {
 
 func (LogResult) JavaClassName() string {
 	return "com.xxl.job.core.biz.model.LogResult"
+}
+
+// LogBasePath dir
+func LogBasePath() string {
+	return logBasPath
+}
+
+// GlueSourcePath dir
+func GlueSourcePath() string {
+	return logBasPath + constants.GlueSourceName
+}
+
+// SetLogBasePath dir
+func SetLogBasePath(path string) {
+	logBasPath = path
 }
 
 func Info(ctx context.Context, args ...interface{}) {
@@ -68,14 +86,17 @@ func Info(ctx context.Context, args ...interface{}) {
 }
 
 func GetLogPath(nowTime time.Time) string {
-	return constants.BasePath + nowTime.Format(constants.DateFormat)
+	return logBasPath + nowTime.Format(constants.DateFormat)
 }
 
+// InitLogPath dir
 func InitLogPath() error {
 	_, err := os.Stat(GetLogPath(time.Now()))
 	if err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(constants.BasePath, os.ModePerm)
+		err = os.MkdirAll(logBasPath, os.ModePerm)
+		// err = os.MkdirAll(logBasPath, 0775)
 	}
+
 	return err
 }
 
