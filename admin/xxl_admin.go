@@ -1,22 +1,24 @@
 package admin
 
 import (
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/goft-cloud/go-xxl-job-client/v2/executor"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
+// XxlAdminServer struct
 type XxlAdminServer struct {
 	AccessToken map[string]string
 	Timeout     time.Duration
-	Addresses   sync.Map
-	Registry    *transport.RegistryParam
-	BeatTime    time.Duration
-	executor    *executor.Executor
+	// Addresses the xxl-job admin address map
+	Addresses sync.Map
+	Registry  *transport.RegistryParam
+	BeatTime  time.Duration
+	executor  *executor.Executor
 }
 
 const (
@@ -35,7 +37,7 @@ func NewAdminServer(addresses []string, timeout, beatTime time.Duration, executo
 	}
 
 	if beatTime >= renewTimeWaring {
-		log.Print("Waring! Risk of your executor can't be renewed")
+		logger.Info("Waring! Risk of your executor can't be renewed")
 	}
 
 	s := &XxlAdminServer{
@@ -59,47 +61,57 @@ func NewAdminServer(addresses []string, timeout, beatTime time.Duration, executo
 	return s
 }
 
+// RegisterExecutor to xxl-job admin
 func (s *XxlAdminServer) RegisterExecutor() {
 	if s.executor.AppName == "" {
 		panic("appName is executor name, it can't be null")
 	}
 
+	regAddr := s.executor.GetRegisterAddr()
 	param := &transport.RegistryParam{
 		RegistryGroup: "EXECUTOR",
 		RegistryKey:   s.executor.AppName,
-		RegistryValue: s.executor.GetRegisterAddr(),
+		RegistryValue: regAddr,
 	}
 	s.Registry = param
 
 	hasValid := s.requestAdminApi(s.registerExe, s.Registry)
 	if !hasValid {
-		panic("register executor failed, please check xxl admin address or accessToken")
+		panic("register executor failed, please check xxl admin address OR accessToken")
+	} else {
+		logger.Infof("register the executor: %s(clientIP: %s) to admin OK", s.executor.AppName, regAddr)
 	}
 }
 
 func (s *XxlAdminServer) AutoRegisterJobGroup() {
 	s.Registry.RegistryValue = s.executor.GetRegisterAddr()
 	t := time.NewTicker(s.BeatTime)
+
 	for {
 		select {
 		case <-t.C:
 			res := s.requestAdminApi(s.registerExe, s.Registry)
 			if !res {
-				log.Print("register job executor failed")
+				logger.Error("Heartbeat: register job executor failed")
+			} else {
+				logger.Debug("Heartbeat: register executor OK")
 			}
 		}
 	}
 }
 
+// RemoveRegisterExecutor remove register executor
 func (s *XxlAdminServer) RemoveRegisterExecutor() {
-	log.Print("remove job executor register")
+	logger.Info("remove job executor from xxl-job admin")
+
 	s.requestAdminApi(s.removerRegister, s.Registry)
 }
 
+// CallbackAdmin call
 func (s *XxlAdminServer) CallbackAdmin(callbackParam []*transport.HandleCallbackParam) {
 	res := s.requestAdminApi(s.apiCallback, callbackParam)
 	if !res {
-		log.Print("job callback failed")
+		logger.Error("job callback failed")
 	}
 }
 
@@ -187,6 +199,7 @@ func (s *XxlAdminServer) setAddressValid(address string, flag int) {
 	}
 }
 
+// GetToken string
 func (s *XxlAdminServer) GetToken() string {
 	if len(s.AccessToken) > 0 {
 		for _, v := range s.AccessToken {

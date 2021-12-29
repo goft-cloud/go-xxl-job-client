@@ -64,6 +64,7 @@ func (h *PackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, 
 			}
 		}
 	}
+
 	return res, length, nil
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
+// XxlClient struct
 type XxlClient struct {
 	executor       *executor2.Executor
 	requestHandler *handler.RequestProcess
@@ -40,17 +41,20 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 	// set log path.
 	logger.SetLogBasePath(clientOps.LogBasePath)
 
+	adminServer.AccessToken = map[string]string{
+		"XXL-JOB-ACCESS-TOKEN": clientOps.AccessToken,
+	}
+
 	var requestHandler *handler.RequestProcess
 	var gettyClient *executor2.GettyClient
 	if clientOps.EnableHttp {
-		adminServer.AccessToken = map[string]string{
-			"XXL-JOB-ACCESS-TOKEN": clientOps.AccessToken,
-		}
-
 		requestHandler = handler.NewRequestProcess(adminServer, &http.HttpRequestHandler{})
 		executor.Protocol = constants.HttpProtocol
-		gettyClient = executor2.NewGettyClient(http.NewHttpPackageHandler(),
-			http.NewHttpMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess))
+
+		gettyClient = executor2.NewGettyClient(
+			http.NewHttpPackageHandler(),
+			http.NewHttpMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess),
+		)
 	} else {
 		// register java POJO
 		hessian.RegisterPOJO(&transport.XxlRpcRequest{})
@@ -62,9 +66,9 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		hessian.RegisterPOJO(&logger.LogResult{})
 		hessian.RegisterPOJO(&transport.RegistryParam{})
 
-		adminServer.AccessToken = map[string]string{
-			"XXL-RPC-ACCESS-TOKEN": clientOps.AccessToken,
-		}
+		// adminServer.AccessToken = map[string]string{
+		// 	"XXL-RPC-ACCESS-TOKEN": clientOps.AccessToken,
+		// }
 
 		requestHandler = handler.NewRequestProcess(adminServer, &rpc.RpcRequestHandler{})
 		gettyClient = &executor2.GettyClient{
@@ -81,45 +85,9 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 	}
 }
 
-func (c *XxlClient) ExitApplication() {
-	c.requestHandler.RemoveRegisterExecutor()
-}
-
-func GetParam(ctx context.Context, key string) (val string, has bool) {
-	jobMap := ctx.Value("jobParam")
-	if jobMap != nil {
-		inputParam, ok := jobMap.(map[string]map[string]interface{})["inputParam"]
-		if ok {
-			val, vok := inputParam[key]
-			if vok {
-				return val.(string), true
-			}
-		}
-	}
-	return "", false
-}
-
-func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
-	jobMap := ctx.Value("jobParam")
-	if jobMap != nil {
-		shardingParam, ok := jobMap.(map[string]map[string]interface{})["sharding"]
-		if ok {
-			idx, vok := shardingParam["shardingIdx"]
-			if vok {
-				shardingIdx = idx.(int32)
-			}
-			total, ok := shardingParam["shardingTotal"]
-			if ok {
-				shardingTotal = total.(int32)
-			}
-		}
-	}
-
-	return shardingIdx, shardingTotal
-}
-
 // Run start and run client.
 func (c *XxlClient) Run() error {
+	// register to xxl-job admin
 	c.requestHandler.RegisterExecutor()
 
 	err := logger.InitLogPath()
@@ -139,4 +107,44 @@ func (c *XxlClient) RegisterJob(jobName string, function handler.JobHandlerFunc)
 // SetGettyLogger set logger to getty.
 func (c *XxlClient) SetGettyLogger(logger getty.Logger) {
 	getty.SetLogger(logger)
+}
+
+// Unregister from xxl-job admin.
+func (c *XxlClient) Unregister() {
+	c.requestHandler.RemoveRegisterExecutor()
+}
+
+func GetParam(ctx context.Context, key string) (val string, has bool) {
+	jobMap := ctx.Value("jobParam")
+	if jobMap != nil {
+		inputParam, ok := jobMap.(map[string]map[string]interface{})["inputParam"]
+		if ok {
+			val, vok := inputParam[key]
+			if vok {
+				return val.(string), true
+			}
+		}
+	}
+
+	return "", false
+}
+
+func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
+	jobMap := ctx.Value("jobParam")
+
+	if jobMap != nil {
+		shardingParam, ok := jobMap.(map[string]map[string]interface{})["sharding"]
+		if ok {
+			idx, vok := shardingParam["shardingIdx"]
+			if vok {
+				shardingIdx = idx.(int32)
+			}
+			total, ok := shardingParam["shardingTotal"]
+			if ok {
+				shardingTotal = total.(int32)
+			}
+		}
+	}
+
+	return shardingIdx, shardingTotal
 }

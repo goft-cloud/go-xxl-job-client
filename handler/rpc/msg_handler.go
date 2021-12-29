@@ -2,19 +2,21 @@ package rpc
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/dubbogo/getty"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
 const (
-	cronTime         = 20e9
-	writePkg_Timeout = 5 * time.Second
+	cronTime = 20e9
+	// timeout for write pkg
+	writePkgTimeout = 5 * time.Second
 )
 
+// MessageHandler struct
 type MessageHandler struct {
 	GettyClient *transport.GettyRPCClient
 	MsgHandle   func(ctx context.Context, pkg interface{}) (res []byte, err error)
@@ -28,24 +30,25 @@ func NewRpcMessageHandler(transport *transport.GettyRPCClient, msgHandler func(c
 }
 
 func (h *MessageHandler) OnOpen(session getty.Session) error {
-	log.Print("OnOpen session:", session.Stat())
+	logger.Infof("OnOpen session: %s", session.Stat())
 	h.GettyClient.AddSession(session)
 	return nil
 }
 
 func (h *MessageHandler) OnError(session getty.Session, err error) {
-	log.Print("OnError session{%s} got error{%v}, will be closed.", session.Stat(), err)
+	logger.Infof("OnError session{%s} got error{%v}, will be closed.", session.Stat(), err)
 }
 
 func (h *MessageHandler) OnClose(session getty.Session) {
-	log.Print("OnClose session{%s} is closing......", session.Stat())
+	logger.Infof("OnClose session{%s} is closing ......", session.Stat())
+
 	h.GettyClient.RemoveSession(session)
 }
 
 func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 	s, ok := pkg.([]interface{})
 	if !ok {
-		log.Print("illegal package{%#v}", pkg)
+		logger.Errorf("illegal package{%#v}", pkg)
 		return
 	}
 
@@ -60,7 +63,7 @@ func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 func (h *MessageHandler) OnCron(session getty.Session) {
 	active := session.GetActive()
 	if cronTime < time.Since(active).Nanoseconds() {
-		log.Print("OnCorn session{%s} timeout{%s}", session.Stat(), time.Since(active).String())
+		logger.Infof("OnCorn session{%s} timeout{%s}", session.Stat(), time.Since(active).String())
 		session.Close()
 		h.GettyClient.RemoveSession(session)
 	}
@@ -72,7 +75,7 @@ func reply(session getty.Session, resBy []byte, err error) {
 		pkg = transport.NewHttpResponsePkg(http.StatusInternalServerError, resBy)
 	}
 
-	if err := session.WritePkg(pkg, writePkg_Timeout); err != nil {
-		log.Print("WritePkg error: %#v, %#v", pkg, err)
+	if err := session.WritePkg(pkg, writePkgTimeout); err != nil {
+		logger.Errorf("WritePkg error: %#v, %#v", pkg, err)
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	hessian "github.com/apache/dubbo-go-hessian2"
 	"github.com/goft-cloud/go-xxl-job-client/v2/admin"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
@@ -108,6 +109,8 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 			} else {
 				if methodName != "beat" {
 					mn := j.ReqHandler.MethodName(ctx, r)
+					logger.Debugf("received server method: %s", mn)
+
 					switch mn {
 					case "idleBeat":
 						jobId, err := j.ReqHandler.IdleBeat(ctx, r)
@@ -162,10 +165,12 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 
 func (j *RequestProcess) RemoveRegisterExecutor() {
 	j.JobHandler.clearJob()
+
 	j.adminServer.RemoveRegisterExecutor()
 }
 
 func (j *RequestProcess) RegisterExecutor() {
 	j.adminServer.RegisterExecutor()
+
 	go j.adminServer.AutoRegisterJobGroup()
 }

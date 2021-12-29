@@ -181,7 +181,7 @@ func (j *JobHandler) cancelJob(jobId int32) {
 					jobParam["logParam"] = logParam
 
 					ctx := context.WithValue(context.Background(), "jobParam", jobParam)
-					logger.Info(ctx, "job canceled by admin!")
+					logger.LogJob(ctx, "job canceled by admin!")
 				}()
 			}
 

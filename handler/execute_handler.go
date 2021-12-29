@@ -55,7 +55,7 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *Job
 		ctx := context.WithValue(context.Background(), "jobParam", jobParamMap)
 
 		msg := "暂不支持" + strings.ToLower(trigger.GlueType[constants.GluePrefixLen:]) + "脚本"
-		logger.Info(ctx, "job parse error:", msg)
+		logger.LogJob(ctx, "job parse error:", msg)
 		return jobParam, errors.New(msg)
 	}
 
@@ -159,7 +159,7 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	cmd := exec.CommandContext(cancelCtx, scriptCmd[glueType], "-c", c)
 	output, err := cmd.Output()
 	if err != nil {
-		logger.Info(ctx, "run script job res:", string(output), ", error:", err.Error())
+		logger.LogJob(ctx, "run script job res:", string(output), ", error:", err.Error())
 		return err
 	}
 	return err
@@ -223,7 +223,7 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 	ctx := context.WithValue(valueCtx, "jobParam", jobParam)
 	err := b.RunFunc(ctx)
 	if err != nil {
-		logger.Info(ctx, "job run failed! msg:", err.Error())
+		logger.LogJob(ctx, "job run failed! msg:", err.Error())
 		return err
 	}
 

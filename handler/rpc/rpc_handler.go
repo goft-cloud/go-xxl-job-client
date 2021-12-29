@@ -22,6 +22,7 @@ func (h *RpcRequestHandler) ParseParam(ctx context.Context, r interface{}) (reqI
 	if refMap == nil {
 		return "", "", "", errors.New("reflect request body error")
 	}
+
 	return refMap["RequestId"].(string), refMap["AccessToken"].(string), refMap["MethodName"].(string), nil
 }
 
@@ -60,6 +61,7 @@ func (h *RpcRequestHandler) Log(ctx context.Context, r interface{}) (log *logger
 	}
 	fromLine := req.Parameters[2].(int32)
 	line, content := logger.ReadLog(req.Parameters[0].(int64), req.Parameters[1].(int64), fromLine)
+
 	log = &logger.LogResult{
 		FromLineNum: fromLine,
 		ToLineNum:   line,
