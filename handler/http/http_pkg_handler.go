@@ -17,6 +17,7 @@ type PkgHandlerRes struct {
 	Valid   bool
 }
 
+// HttpPackageHandler struct
 type HttpPackageHandler struct {
 	pkgHandlerRes *PkgHandlerRes
 }

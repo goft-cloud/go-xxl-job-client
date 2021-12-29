@@ -18,10 +18,13 @@ import (
 
 // XxlClient struct
 type XxlClient struct {
-	executor       *executor2.Executor
+	options  option.ClientOptions
+	executor *executor2.Executor
+	// request handler
 	requestHandler *handler.RequestProcess
 }
 
+// NewXxlClient create
 func NewXxlClient(opts ...option.Option) *XxlClient {
 	clientOps := option.NewClientOptions(opts...)
 
@@ -66,10 +69,6 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		hessian.RegisterPOJO(&logger.LogResult{})
 		hessian.RegisterPOJO(&transport.RegistryParam{})
 
-		// adminServer.AccessToken = map[string]string{
-		// 	"XXL-RPC-ACCESS-TOKEN": clientOps.AccessToken,
-		// }
-
 		requestHandler = handler.NewRequestProcess(adminServer, &rpc.RpcRequestHandler{})
 		gettyClient = &executor2.GettyClient{
 			PkgHandler:    rpc.NewPackageHandler(),
@@ -77,16 +76,25 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		}
 	}
 
+	// remove executor on client server close
+	gettyClient.ServeCloserFn = requestHandler.UnregisterExecutor
+
 	executor.SetClient(gettyClient)
 
 	return &XxlClient{
 		requestHandler: requestHandler,
-		executor:       executor,
+		// other
+		executor: executor,
+		options:  clientOps,
 	}
 }
 
 // Run start and run client.
 func (c *XxlClient) Run() error {
+	logger.Infof("go executor client run on mode: %s", option.RunMode())
+	logger.Infof("xxl-job admin address list is: %v", c.options.AdminAddr)
+	// logger.Infof("registered executor name is: %s", c.executor.AppName)
+
 	// register to xxl-job admin
 	c.requestHandler.RegisterExecutor()
 
@@ -94,6 +102,8 @@ func (c *XxlClient) Run() error {
 	if err != nil {
 		return err
 	}
+
+	logger.Infof("go executor client started on port: %d", c.options.Port)
 
 	c.executor.Run(c.requestHandler.JobHandler.BeanJobLength())
 	return nil
@@ -111,7 +121,12 @@ func (c *XxlClient) SetGettyLogger(logger getty.Logger) {
 
 // Unregister from xxl-job admin.
 func (c *XxlClient) Unregister() {
-	c.requestHandler.RemoveRegisterExecutor()
+	c.requestHandler.UnregisterExecutor()
+}
+
+// Options gets
+func (c *XxlClient) Options() option.ClientOptions {
+	return c.options
 }
 
 func GetParam(ctx context.Context, key string) (val string, has bool) {

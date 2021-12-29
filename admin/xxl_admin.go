@@ -15,6 +15,7 @@ type XxlAdminServer struct {
 	AccessToken map[string]string
 	Timeout     time.Duration
 	// Addresses the xxl-job admin address map
+	// - key is xxl-job admin address url
 	Addresses sync.Map
 	Registry  *transport.RegistryParam
 	BeatTime  time.Duration
@@ -27,6 +28,7 @@ const (
 )
 
 type Address struct {
+	// Valid -1 无效 0 未使用 1 有效
 	Valid       int
 	RequestTime int64
 }
@@ -92,9 +94,9 @@ func (s *XxlAdminServer) AutoRegisterJobGroup() {
 		case <-t.C:
 			res := s.requestAdminApi(s.registerExe, s.Registry)
 			if !res {
-				logger.Error("Heartbeat: register job executor failed")
+				logger.Error("Heartbeat: register job executor to server FAILED")
 			} else {
-				logger.Debug("Heartbeat: register executor OK")
+				logger.Debug("Heartbeat: register job executor to server OK")
 			}
 		}
 	}

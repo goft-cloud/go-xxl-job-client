@@ -108,6 +108,7 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *Job
 	return jobParam, nil
 }
 
+// Execute script job
 func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunParam) error {
 	logParam := make(map[string]interface{})
 	logParam["logId"] = runParam.LogId
@@ -123,6 +124,8 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	jobParam["logParam"] = logParam
 	jobParam["inputParam"] = runParam.InputParam
 	jobParam["sharding"] = shardParam
+
+	logger.Debugf("exec script job, type: %s, ID: %d, params: %v", glueType, jobId, jobParam)
 	ctx := context.WithValue(context.Background(), "jobParam", jobParam)
 
 	basePath := logger.GetLogPath(time.Now())
@@ -145,9 +148,11 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 			}
 		}
 	}
+
 	if runParam.ShardTotal > 0 {
 		buffer.WriteString(fmt.Sprintf(" %d %d", runParam.ShardIdx, runParam.ShardTotal))
 	}
+
 	buffer.WriteString(" >>")
 	buffer.WriteString(logPath)
 
@@ -162,6 +167,7 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		logger.LogJob(ctx, "run script job res:", string(output), ", error:", err.Error())
 		return err
 	}
+
 	return err
 }
 
@@ -223,7 +229,7 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 	ctx := context.WithValue(valueCtx, "jobParam", jobParam)
 	err := b.RunFunc(ctx)
 	if err != nil {
-		logger.LogJob(ctx, "job run failed! msg:", err.Error())
+		logger.LogJob(ctx, "job#%d run failed! msg:", jobId, err.Error())
 		return err
 	}
 

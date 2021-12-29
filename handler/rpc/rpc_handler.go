@@ -43,6 +43,7 @@ func (h *RpcRequestHandler) Run(ctx context.Context, r interface{}) (triggerPara
 	if len(req.Parameters) == 0 {
 		return nil, errors.New("job parameters is empty")
 	}
+
 	return req.Parameters[0].(*transport.TriggerParam), err
 }
 
@@ -51,6 +52,7 @@ func (h *RpcRequestHandler) Kill(ctx context.Context, r interface{}) (jobId int3
 	if len(req.Parameters) == 0 {
 		return 0, errors.New("job parameters is empty")
 	}
+
 	return req.Parameters[0].(int32), err
 }
 
@@ -59,7 +61,12 @@ func (h *RpcRequestHandler) Log(ctx context.Context, r interface{}) (log *logger
 	if len(req.Parameters) == 0 {
 		return nil, errors.New("job parameters is empty")
 	}
+
+	logId := req.Parameters[1].(int64)
 	fromLine := req.Parameters[2].(int32)
+
+	logger.Debugf("fetch job logs. logId: %d, start-line: %d, reqId: %s", logId, fromLine, req.RequestId)
+
 	line, content := logger.ReadLog(req.Parameters[0].(int64), req.Parameters[1].(int64), fromLine)
 
 	log = &logger.LogResult{

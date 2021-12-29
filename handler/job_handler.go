@@ -103,6 +103,8 @@ func (j *JobHandler) HasRunning(jobId int32) bool {
 
 // PutJobToQueue push job to queue and run it.
 func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) {
+	logger.Debugf("put and start job, info: %#v", trigger)
+
 	qu, has := j.QueueMap[trigger.JobId] // map value是地址，读不加锁
 	if has {
 		runParam, err := qu.ParseJob(trigger)

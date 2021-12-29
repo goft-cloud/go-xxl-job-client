@@ -2,6 +2,7 @@ package transport
 
 import "github.com/apache/dubbo-go-hessian2"
 
+// XxlRpcRequest struct
 type XxlRpcRequest struct {
 	RequestId        string
 	CreateMillisTime int64
@@ -35,6 +36,10 @@ type TriggerParam struct {
 func (TriggerParam) JavaClassName() string {
 	return "com.xxl.job.core.biz.model.TriggerParam"
 }
+
+// func (TriggerParam) InfoString() string {
+// 	return
+// }
 
 type Beat struct {
 	RequestId        string

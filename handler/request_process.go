@@ -109,7 +109,7 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 			} else {
 				if methodName != "beat" {
 					mn := j.ReqHandler.MethodName(ctx, r)
-					logger.Debugf("received server method: %s", mn)
+					logger.Debugf("received server method: %s, reqId: %s", mn, reqId)
 
 					switch mn {
 					case "idleBeat":
@@ -163,12 +163,14 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 	return bytes, nil
 }
 
-func (j *RequestProcess) RemoveRegisterExecutor() {
+// UnregisterExecutor form xxl-job admin server
+func (j *RequestProcess) UnregisterExecutor() {
 	j.JobHandler.clearJob()
 
 	j.adminServer.RemoveRegisterExecutor()
 }
 
+// RegisterExecutor to xxl-job admin server
 func (j *RequestProcess) RegisterExecutor() {
 	j.adminServer.RegisterExecutor()
 

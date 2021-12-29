@@ -3,13 +3,16 @@ package executor
 import (
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dubbogo/getty"
-	"github.com/dubbogo/getty/demo/util"
 	"github.com/dubbogo/gost/sync"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 )
 
 const (
@@ -28,12 +31,17 @@ var (
 	taskPool     *gxsync.TaskPool
 )
 
+// GettyClient client server struct
 type GettyClient struct {
+	// ServeCloserFn on client server close.
+	ServeCloserFn func()
+	// PkgHandler for request
 	PkgHandler getty.ReadWriter
 
 	EventListener getty.EventListener
 }
 
+// NewGettyClient create.
 func NewGettyClient(pkgHandler getty.ReadWriter, eventListener getty.EventListener) *GettyClient {
 	return &GettyClient{
 		PkgHandler:    pkgHandler,
@@ -65,7 +73,16 @@ func (c *GettyClient) Run(port, taskSize int) {
 		}
 		return err
 	})
-	util.WaitCloseSignals(server)
+
+	// util.WaitCloseSignals(server)
+	waitCloseSignals(func() {
+		logger.Info("client server closing ......")
+
+		server.Close()
+		if c.ServeCloserFn != nil {
+			c.ServeCloserFn()
+		}
+	})
 }
 
 func (c *GettyClient) initialSession(session getty.Session) (err error) {
@@ -100,4 +117,12 @@ func (c *GettyClient) initialSession(session getty.Session) (err error) {
 	session.SetPkgHandler(c.PkgHandler)
 	session.SetEventListener(c.EventListener)
 	return err
+}
+
+func waitCloseSignals(closer func()) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, os.Kill, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	<-signals
+	// closer.Close()
+	closer()
 }

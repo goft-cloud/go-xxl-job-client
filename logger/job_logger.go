@@ -44,6 +44,24 @@ func SetLogBasePath(path string) {
 	logBasPath = path
 }
 
+// GetLogPath dir path.
+func GetLogPath(nowTime time.Time) string {
+	return logBasPath + "/" + nowTime.Format(constants.DateFormat)
+}
+
+// InitLogPath dir
+func InitLogPath() error {
+	Infof("job logs base path dir: %s", logBasPath)
+
+	_, err := os.Stat(GetLogPath(time.Now()))
+	if err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(logBasPath, os.ModePerm)
+		// err = os.MkdirAll(logBasPath, 0775)
+	}
+
+	return err
+}
+
 // LogJob info to file
 func LogJob(ctx context.Context, args ...interface{}) {
 	jobMap := ctx.Value("jobParam")
@@ -86,22 +104,6 @@ func LogJob(ctx context.Context, args ...interface{}) {
 			}
 		}
 	}
-}
-
-// GetLogPath dir path.
-func GetLogPath(nowTime time.Time) string {
-	return logBasPath + "/" + nowTime.Format(constants.DateFormat)
-}
-
-// InitLogPath dir
-func InitLogPath() error {
-	_, err := os.Stat(GetLogPath(time.Now()))
-	if err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(logBasPath, os.ModePerm)
-		// err = os.MkdirAll(logBasPath, 0775)
-	}
-
-	return err
 }
 
 func writeLog(logPath, logFile, log string) error {
