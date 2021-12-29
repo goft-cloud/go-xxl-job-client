@@ -34,9 +34,9 @@ func LogBasePath() string {
 	return logBasPath
 }
 
-// GlueSourcePath dir
+// GlueSourcePath file path
 func GlueSourcePath() string {
-	return logBasPath + constants.GlueSourceName
+	return logBasPath + "/" + constants.GlueSourceName
 }
 
 // SetLogBasePath dir
@@ -46,6 +46,7 @@ func SetLogBasePath(path string) {
 
 // GetLogPath dir path.
 func GetLogPath(nowTime time.Time) string {
+	// split by YMD dir.
 	return logBasPath + "/" + nowTime.Format(constants.DateFormat)
 }
 
@@ -100,29 +101,22 @@ func LogJob(ctx context.Context, args ...interface{}) {
 				buffer.WriteString("\r\n")
 
 				logId := logid.(int64)
-				writeLog(GetLogPath(nowTime), fmt.Sprintf("%d", logId)+".log", buffer.String())
+				writeLog(GetLogPath(nowTime), LogfileName(logId), buffer.String())
 			}
 		}
 	}
 }
 
-func writeLog(logPath, logFile, log string) error {
+func writeLog(logPath, logFile, msg string) error {
 	if strings.Trim(logFile, " ") != "" {
-		fileFullPath := logPath + "/" + logFile
-		file, err := os.OpenFile(fileFullPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil && os.IsNotExist(err) {
-			err = os.MkdirAll(logPath, os.ModePerm)
-			if err == nil {
-				file, err = os.OpenFile(fileFullPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-				if err != nil {
-					return err
-				}
-			}
+		file, err := OpenLogFile(logPath, logFile)
+		if err != nil {
+			return err
 		}
 
 		if file != nil {
 			defer file.Close()
-			res, err := file.Write([]byte(log))
+			res, err := file.Write([]byte(msg))
 			if err != nil {
 				return err
 			}
@@ -132,6 +126,27 @@ func writeLog(logPath, logFile, log string) error {
 		}
 	}
 	return nil
+}
+
+// OpenLogFile handler
+func OpenLogFile(logDir, fileName string) (*os.File, error) {
+	fileFullPath := logDir + "/" + fileName
+
+	// ensure log dir is created
+	_, err := os.Stat(logDir)
+	if err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(logBasPath, os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return os.OpenFile(fileFullPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+}
+
+// LogfileName build
+func LogfileName(logId int64) string {
+	return fmt.Sprintf("%d", logId) + ".log"
 }
 
 func ReadLog(logDateTim, logId int64, fromLineNum int32) (line int32, content string) {

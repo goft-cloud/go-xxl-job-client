@@ -59,8 +59,8 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *Job
 		return jobParam, errors.New(msg)
 	}
 
-	// path := fmt.Sprintf("%s%d_%d%s", constants.GlueSourcePath, trigger.JobId, trigger.GlueUpdatetime, suffix)
-	path := fmt.Sprintf("%s%d_%d%s", logger.GlueSourcePath(), trigger.JobId, trigger.GlueUpdatetime, suffix)
+	// path := fmt.Sprintf("%s_%d_%d%s", constants.GlueSourcePath, trigger.JobId, trigger.GlueUpdatetime, suffix)
+	path := fmt.Sprintf("%s/gs_%d_%d%s", logger.GlueSourcePath(), trigger.JobId, trigger.GlueUpdatetime, suffix)
 	_, err = os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		s.Lock()
@@ -128,23 +128,26 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	logger.Debugf("exec script job, type: %s, ID: %d, params: %v", glueType, jobId, jobParam)
 	ctx := context.WithValue(context.Background(), "jobParam", jobParam)
 
-	basePath := logger.GetLogPath(time.Now())
-	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+	// ensure log dir created.
+	logDir := logger.GetLogPath(time.Now())
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		s.Lock()
-		os.MkdirAll(basePath, os.ModePerm)
+		os.MkdirAll(logDir, os.ModePerm)
 		s.Unlock()
 	}
-	logPath := basePath + fmt.Sprintf("/%d", runParam.LogId) + ".log"
+
+	logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
 
 	var buffer bytes.Buffer
 	buffer.WriteString(runParam.JobTag)
 	if len(runParam.InputParam) > 0 {
 		ps, ok := runParam.InputParam["param"]
 		if ok {
+			// 参数要用逗号隔开，用空格或者换行可能有问题
 			params := strings.Split(ps.(string), ",")
 			for _, v := range params {
 				buffer.WriteString(" ")
-				buffer.WriteString(v)
+				buffer.WriteString(strings.TrimSpace(v))
 			}
 		}
 	}
@@ -153,18 +156,23 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		buffer.WriteString(fmt.Sprintf(" %d %d", runParam.ShardIdx, runParam.ShardTotal))
 	}
 
-	buffer.WriteString(" >>")
-	buffer.WriteString(logPath)
+	// use command pipe write log to file.
+	buffer.WriteString(" >> ")
+	buffer.WriteString(logfile)
 
 	cancelCtx, canFun := context.WithCancel(context.Background())
 	defer canFun()
 	c := buffer.String()
+	logger.Debugf("script job contents: %s", c)
 
 	runParam.CurrentCancelFunc = canFun
+	// NOTICE: '-c' only for shell script
 	cmd := exec.CommandContext(cancelCtx, scriptCmd[glueType], "-c", c)
+
+	// cmd.Output() must be waite command complete.
 	output, err := cmd.Output()
 	if err != nil {
-		logger.LogJob(ctx, "run script job res:", string(output), ", error:", err.Error())
+		logger.LogJob(ctx, "run script job result:", string(output), ", error: ", err.Error())
 		return err
 	}
 

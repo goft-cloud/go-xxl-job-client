@@ -25,13 +25,14 @@ type JobQueue struct {
 }
 
 type JobRunParam struct {
-	LogId             int64
-	LogDateTime       int64
-	JobName           string
-	JobTag            string
-	InputParam        map[string]interface{}
-	ShardIdx          int32
-	ShardTotal        int32
+	LogId       int64
+	LogDateTime int64
+	JobName     string
+	JobTag      string
+	InputParam  map[string]interface{}
+	ShardIdx    int32
+	ShardTotal  int32
+	// CurrentCancelFunc use for kill running job
 	CurrentCancelFunc context.CancelFunc
 }
 

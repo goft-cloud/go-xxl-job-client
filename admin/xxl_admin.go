@@ -94,9 +94,9 @@ func (s *XxlAdminServer) AutoRegisterJobGroup() {
 		case <-t.C:
 			res := s.requestAdminApi(s.registerExe, s.Registry)
 			if !res {
-				logger.Error("Heartbeat: register job executor to server FAILED")
+				logger.Error("Heartbeat - ensure register job executor to server FAILED")
 			} else {
-				logger.Debug("Heartbeat: register job executor to server OK")
+				logger.Debug("Heartbeat - ensure register job executor to server OK")
 			}
 		}
 	}
