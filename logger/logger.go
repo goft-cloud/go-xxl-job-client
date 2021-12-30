@@ -1,5 +1,6 @@
 package logger
 
+// TIP: 这些日志方法仅用于输出提示，调试信息
 import (
 	"fmt"
 	"log"

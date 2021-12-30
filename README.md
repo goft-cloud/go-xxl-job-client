@@ -1,8 +1,15 @@
-# go-xxl-job-client
+# Go xxl-job Client
 
 xxl-job go 客户端版
 
-> 项目 Forks https://github.com/feixiaobo/go-xxl-job-client
+> 项目 Fork 自 https://github.com/feixiaobo/go-xxl-job-client
+
+**调整：**
+
+- 支持自定义job日志存放目录
+- 支持开发调试模式，可以看到详细的接收日志
+- 添加客户端关闭处理：自动从xxl-job admin取消注册
+- 用户输入参数分割由 `,` 调整为换行符 `\n`
 
 ## 介绍
 
@@ -21,7 +28,7 @@ xxj-job 是一个 Java 实现的轻量级分布式任务调度平台，具体实
 
 详细步骤请参考[https://github.com/xuxueli/xxl-job][1]， 此处不再描述 admin 的部署。
 
-## 部署 xxl-job 执行器（go 版本）
+## 部署 xxl-job 执行器（go版本）
 
 ### (1) 引入 go 客户端依赖
 
@@ -29,69 +36,122 @@ xxj-job 是一个 Java 实现的轻量级分布式任务调度平台，具体实
 go get github.com/goft-cloud/go-xxl-job-client/v2
 ```
 
-### (2) 在 main 方法中构建客户端 client，注册任务，启动端口
+### (2) 构建客户端，注册任务，启动端口
 
-#### (1) 实现任务
+示例代码可参考 example 目录代码
+
+#### (1) 初始化，启动项目
 
 ```go
-func XxlJobTest(ctx context.Context) error {
-	logger.Info(ctx, "golang job run success >>>>>>>>>>>>>>")
-	logger.Info(ctx, "the input param:", xxl.GetParam(ctx, "name"))
+	// TIP: 可以在开发时打开调试模式，可以看到更多信息
+	option.SetRunMode(option.ModeDebug)
+
+	var clientOpts = []option.Option{
+		// option.WithAccessToken("edqedewfrqdrfrfr"),
+		option.WithEnableHttp(true), // xxl_job v2.2之后的版本
+		option.WithClientPort(8083), // 客户端启动端口
+		option.WithAdminAddress("http://localhost:8080/xxl-job-admin"),
+	}
+
+	client := xxl.NewXxlClient(clientOpts...)
+
+	// 更多选项配置
+	// var admAddr = config.String("xxl-job-addr", "")
+	// if !strutil.IsBlank(admAddr) {
+	// 	clientOpts = append(clientOpts, option.WithAdminAddress(admAddr))
+	// }
+	//
+	// var logPath = config.String("xxl-job-log-path", "")
+	// if !strutil.IsBlank(logPath) {
+	// 	clientOpts = append(clientOpts, option.WithLogBasePath(logPath))
+	// }
+
+	// add getty logger
+	client.SetGettyLogger(&logrus.Logger{
+		Out:       os.Stdout,
+		Formatter: new(logrus.TextFormatter),
+		Level:     logrus.InfoLevel,
+	})
+
+	// 注册JobHandler(Bean模式任务的handler)
+	client.RegisterJob("my_job_handler", JobTest)
+
+	// 启动客户端
+	// client.Run()
+	client.MustRun()
+```
+
+注意：
+
+- 构建客户端时的 appName(`xxl-go-client`) 是 xxl-job-admin 后台添加执行器时的名称
+- 注册的名字 `my_job_handler` 是 xxl-job-admin 后台新增Bean模式任务时的填写的 JobHandler 名
+- 若使用 `SHELL,PHP,PAYTHON` 等脚本模式，可无需注册 JobHandler 处理逻辑
+
+#### (2) 实现XxlJobHandler任务逻辑
+
+若要使用 Bean模式任务，必须实现对应的 JobHandler 逻辑
+
+```go
+func XxlJobHandlerTest(ctx context.Context) error {
+	// do something ....
+	logger.LogJob(ctx, "golang job run success >>>>>>>>>>>>>>")
+	logger.LogJob(ctx, "the input param:", xxl.GetParam(ctx, "name"))
 	return nil
 }
 ```
-
-#### (2) 注册执行，任务，启动项目（可参考 example 目录）
-
-```go 
-   // 构建客户端
-	client := xxl.NewXxlClient(
-	        option.WithAppName("go-example"),
-                option.WithEnableHttp(true), //xxl_job v2.2.0版本及以后
-		option.WithClientPort(8083),
-	)
-	client.RegisterJob("testJob", JobTest) //注册任务
-	client.Run() //启动客户端
-```
-
-- 构建客户端时的 appName 是 xxl-job-admin 后台添加执行器时的 name
-- 注册任务时的名字是 xxl-job-admin 后台新增任务时的 JobHandler
 
 #### (3) 在 xxl-job-admin 后台管理页面添加执行器
 
 ![add-executor](example/images/add-executor.png)
 
-- appName 为客户注册执行器时的名字
-- 注册方式选择自动注册
+- appName 为客户注册执行器时的名字(eg: `xxl-go-client`)
+- 注册方式选择 **自动注册** 即可
 
 #### (4) 在 xxl-job-admin 后台管理页面添加任务
 
+运行模式支持 BEAN 模式和其他脚本模式（不支持 GLUE(Java)）
+
+**Bean 模式任务：**
+
+- 执行器选择刚刚添加的执行器(这里是 `xxl-go-client`)
+- 运行模式选择 BEAN 模式，此模式下才可以配置 `JobHandler`
+- JobHandler 为 `client.RegisterJob` 注册任务时的 name
+
 ![add-task-use-job-handler](example/images/add-task-use-job-handler.png)
 
-- JobHandler 为注册任务时的 name
-- 执行器选择刚刚添加的执行器
-- 运行模式默认 BEAN 模式,可选择其他脚本模式（不支持 GLUE(Java)）
+**脚本模式任务：**
+
+脚本模式任务可以选 SHELL, PHP, python 等
+
+- 脚本模式无需JobHandler，它是通过客户端机器上的 `bash, php` 等执行配置的脚本代码
+
+**查看任务列表：**
 
 添加完成后启动在任务管理菜单中查看任务
 
+![see-task-list.png](example/images/see-task-list.png)
+
+## 运行任务
+
 ![see-task-logs.png](example/images/see-task-logs.png)
 
-## 日志输出及参数传递
+### Job日志输出及参数传递
 
-- go-xxl-job-client 自己实现了日志输出，使用 github.com/goft-cloud/go-xxl-job-client/v2/logger 包输出日志，因为 golang 不支持像 Java 的
+- go-xxl-job-client 自己实现了日志输出，使用 `github.com/goft-cloud/go-xxl-job-client/v2/logger` 包输出日志，因为 golang 不支持像 Java 的
   ThreadLocal 一样的线程变量，已无法获取到 golang 的协程 id,所以日志输出依赖的内容已存到 context 上下文遍历中，故 log 需要使用 context 变量。可参考任务配置中的日志输出,
 
 ```
-	logger.Info(ctx, "golang job run success >>>>>>>>>>>>>>")
+	logger.LogJob(ctx, "golang job run success >>>>>>>>>>>>>>")
 ```
 
 - 任务参数传递，可使用 xxl.GetParam 获取到任务配置或执行时手动添加的参数，使用 xxl.GetSharding 获取到分片参数。
 
 ```
         param, _ := xxl.GetParam(ctx, "name") //获取输入参数
-        logger.Info(ctx, "the input param:", param)
+        logger.LogJob(ctx, "the input param:", param)
+
         shardingIdx, shardingTotal := xxl.GetSharding(ctx) //获取分片参数
-        logger.Info(ctx, "the sharding param: idx:", shardingIdx, ", total:", shardingTotal)
+        logger.LogJob(ctx, "the sharding param: idx:", shardingIdx, ", total:", shardingTotal)
 ```
 
 在调度日志中点击执行日志查看任务执行日志。
@@ -100,20 +160,14 @@ func XxlJobTest(ctx context.Context) error {
 
 #### (1) 遇到错误：register executor failed, please check xxl admin address or accessToken
 
-```
 xxl_job_admin地址不通或者accessToken错误，请检查是否配置了AdminAddress
-```
 
 #### (2) 执行任务admin端报错：java.net.MalformedURLException: no protocol: 192.168.0.105:8083/run
 
-```
 xxl_job_admin v2.2.0之后和客户端通信采用http/https通信。需在client端开启http协议，在client option中构造 option.WithEnableHttp(true)， 参考 example下client_test。 旧版本请不要添加这个option
-```
+
 
 [1]: https://github.com/xuxueli/xxl-job
-
 [2]: https://github.com/apache/dubbo-go-hessian2
-
 [3]: https://github.com/xuxueli/xxl-rpc
-
 [4]: https://github.com/dubbogo/getty

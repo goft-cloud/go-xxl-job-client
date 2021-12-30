@@ -89,6 +89,13 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 	}
 }
 
+// MustRun start and run, will panic on error
+func (c *XxlClient) MustRun() {
+	if err := c.Run(); err != nil {
+		panic(err)
+	}
+}
+
 // Run start and run client.
 func (c *XxlClient) Run() error {
 	logger.Infof("go executor client run on mode: %s", option.RunMode())

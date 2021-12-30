@@ -143,8 +143,8 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	if len(runParam.InputParam) > 0 {
 		ps, ok := runParam.InputParam["param"]
 		if ok {
-			// 参数要用逗号隔开，用空格或者换行可能有问题
-			params := strings.Split(ps.(string), ",")
+			// 参数可用空格或者换行隔开
+			params := strings.Split(ps.(string), "\n")
 			for _, v := range params {
 				buffer.WriteString(" ")
 				buffer.WriteString(strings.TrimSpace(v))
@@ -156,7 +156,8 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		buffer.WriteString(fmt.Sprintf(" %d %d", runParam.ShardIdx, runParam.ShardTotal))
 	}
 
-	// use command pipe write log to file.
+	// TIP: use command pipe write log to file.
+	// can also: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
 	buffer.WriteString(" >> ")
 	buffer.WriteString(logfile)
 
