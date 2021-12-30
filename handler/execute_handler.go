@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"reflect"
@@ -14,7 +16,7 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
-	"github.com/pkg/errors"
+	"github.com/gookit/goutil/strutil"
 )
 
 var scriptMap = map[string]string{
@@ -33,15 +35,18 @@ var scriptCmd = map[string]string{
 	"GLUE_POWERSHELL": "powershell",
 }
 
+// ExecuteHandler interface
 type ExecuteHandler interface {
 	ParseJob(trigger *transport.TriggerParam) (runParam *JobRunParam, err error)
 	Execute(jobId int32, glueType string, runParam *JobRunParam) error
 }
 
+// ScriptHandler struct
 type ScriptHandler struct {
 	sync.RWMutex
 }
 
+// ParseJob info
 func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *JobRunParam, err error) {
 	suffix, ok := scriptMap[trigger.GlueType]
 	if !ok {
@@ -124,7 +129,7 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	jobParam["inputParam"] = runParam.InputParam
 	jobParam["sharding"] = shardParam
 
-	logger.Debugf("exec script job, type: %s, ID: %d, params: %v", glueType, jobId, jobParam)
+	logger.Debugf("exec script job#%d, type: %s, params: %v", jobId, glueType, jobParam)
 	ctx := context.WithValue(context.Background(), "jobParam", jobParam)
 
 	// ensure log dir created.
@@ -135,40 +140,64 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		s.Unlock()
 	}
 
-	logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
-
-	// code := runParam.BuildCmdArgsString(logfile)
-	cmdArgs := runParam.BuildCmdArgs(logfile)
 	binName := scriptCmd[glueType]
+	logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
 
 	cancelCtx, canFun := context.WithCancel(context.Background())
 	defer canFun()
 	runParam.CurrentCancelFunc = canFun
 
-	// NOTICE: '-c' only for shell script
-	// cmd = exec.CommandContext(cancelCtx, "bash", "-c", code)
-	// cmd = exec.CommandContext(cancelCtx, binName, "-c", code)
-	cmd := exec.CommandContext(cancelCtx, binName, cmdArgs...)
-	logger.Debugf("will run task script command: %s", cmd.String())
+	var cmd *exec.Cmd
 
-	// cmd.Output() must be waite command complete.
-	output, err := cmd.Output()
+	// NOTICE: '-c' only for shell script
+	if binName == "bash" {
+		code := runParam.BuildCmdArgsString(logfile)
+		cmd = exec.CommandContext(cancelCtx, "bash", "-c", code)
+	} else {
+		// TIP: use args the pipe mark >> no effect.
+		// cmdArgs := runParam.BuildCmdArgs(logfile)
+		args := runParam.BuildCmdArgs()
+		cmd = exec.CommandContext(cancelCtx, binName, args...)
+		stdout, _ := cmd.StdoutPipe()
+
+		f, err := logger.OpenLogFile(logfile)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		// go io.Copy(io.MultiWriter(f, os.Stdout), stdout)
+		go io.Copy(f, stdout)
+	}
+
+	if runParam.ShardTotal > 0 {
+		cmd.Env = []string{
+			"XXL_SHARD_IDX=" + strutil.MustString(runParam.ShardIdx),
+			"XXL_SHARD_TOTAL=" + strutil.MustString(runParam.ShardTotal),
+		}
+	}
+
+	logger.Debugf("will run task script command: '%s', logfile: %s", cmd.String(), logfile)
+
+	err := cmd.Run()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
-			logger.Debugf("run task script command error: %s", ee.Error())
+			logger.Errorf("run task#%d script command error: %s", runParam.LogId, string(ee.Stderr))
 		}
-		logger.LogJob(ctx, "run script job result:", string(output), ", error: ", err.Error())
+		logger.LogJob(ctx, "run task#%d script failed, error: ", runParam.LogId, err.Error())
 		return err
 	}
 
-	logger.Debugf("run task command script success. output: %s", string(output))
+	logger.Debugf("run task#%d command script success", runParam.LogId)
 	return nil
 }
 
+// BeanHandler struct
 type BeanHandler struct {
 	RunFunc JobHandlerFunc
 }
 
+// ParseJob info
 func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *JobRunParam, err error) {
 	if b.RunFunc == nil {
 		return jobParam, errors.New("job run function not found")
@@ -200,6 +229,7 @@ func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *JobRu
 	return jobParam, err
 }
 
+// Execute bean handler func
 func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunParam) error {
 	logParam := make(map[string]interface{})
 	logParam["logId"] = runParam.LogId

@@ -4,6 +4,7 @@ import time
 import sys
 
 print("xxl-job: hello python")
+print("全部参数：", sys.argv)
 
 print("脚本位置：", sys.argv[0])
 print("任务参数：", sys.argv[1])

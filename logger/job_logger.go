@@ -114,7 +114,7 @@ func LogJob(ctx context.Context, args ...interface{}) {
 
 func writeLog(logPath, logFile, msg string) error {
 	if strings.Trim(logFile, " ") != "" {
-		file, err := OpenLogFile(logPath, logFile)
+		file, err := OpenDirFile(logPath, logFile)
 		if err != nil {
 			return err
 		}
@@ -133,8 +133,8 @@ func writeLog(logPath, logFile, msg string) error {
 	return nil
 }
 
-// OpenLogFile handler
-func OpenLogFile(logDir, fileName string) (*os.File, error) {
+// OpenDirFile open file in the dir
+func OpenDirFile(logDir, fileName string) (*os.File, error) {
 	fileFullPath := logDir + "/" + fileName
 
 	// ensure log dir is created
@@ -146,7 +146,12 @@ func OpenLogFile(logDir, fileName string) (*os.File, error) {
 		}
 	}
 
-	return os.OpenFile(fileFullPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	return OpenLogFile(fileFullPath)
+}
+
+// OpenLogFile handler
+func OpenLogFile(logfile string) (*os.File, error) {
+	return os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 }
 
 // LogfileName build

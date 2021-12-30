@@ -3,10 +3,13 @@ package handler_test
 import (
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/gookit/goutil/dump"
 	"github.com/gookit/goutil/fsutil"
+	"github.com/gookit/goutil/mathutil"
+	"github.com/gookit/goutil/strutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +49,65 @@ func TestScriptHandler_Execute_shell(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestScriptHandler_Execute_shell2file(t *testing.T) {
+func TestScriptHandler_Execute_shell2file_demo_useString(t *testing.T) {
+	id := mathutil.RandomInt(100, 999)
+	pwd, _ := os.Getwd()
+	lfile := pwd + "/testdata/demo-" + strutil.MustString(id) + ".log"
+
+	// use pipe mask to file log.
+	// Run:
+	// 	bash -c 'testdata/demo_run_shell.sh arg0 arg1 0 1 >>testdata/demo-424.log'
+	args := []string{"testdata/demo_run_shell.sh", "arg0", "arg1", "0", "1", ">>" + lfile}
+
+	code := strings.Join(args, " ")
+	cmd := exec.Command("bash", "-c", code)
+	dump.P(cmd.String())
+
+	_, err := cmd.Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			dump.P(string(ee.Stderr))
+		}
+	}
+
+	text := fsutil.MustReadFile(lfile)
+	assert.Contains(t, text, "testdata/demo_run_shell.sh")
+}
+
+func TestScriptHandler_Execute_shell2file_demo_useArgs(t *testing.T) {
+	id := mathutil.RandomInt(100, 999)
+	pwd, _ := os.Getwd()
+	lfile := ">> " + pwd + "/testdata/demo-" + strutil.MustString(id) + ".log"
+
+	// use pipe mask to file log.
+	// args := []string{"testdata/demo_run_shell.sh", "arg0", "arg1", "0", "1", ">>", lfile}
+	args := []string{"testdata/demo_run_shell.sh", "arg0", "arg1", "0", "1", lfile}
+	cmd := exec.Command("bash", args...)
+	dump.P(cmd.String())
+
+	output, err := cmd.Output()
+	dump.P(string(output), err)
+
+	assert.NoError(t, err)
+	assert.Contains(t, string(output), "脚本位置：testdata/demo_run_shell.sh")
+
+}
+
+func TestScriptHandler_Execute_shell2file_mid(t *testing.T) {
+	id := mathutil.RandomInt(100, 999)
+	lfile := ">> testdata/mid-" + strutil.MustString(id) + ".log"
+
+	// use pipe mask to file log.
+	// args := []string{"testdata/long_time_run.sh", "arg0", "arg1", "0", "1", ">>", lfile}
+	args := []string{"testdata/middle_time_run.sh", "arg0", "arg1", "0", "1", lfile}
+	cmd := exec.Command("bash", args...)
+	dump.P(cmd.String())
+
+	output, err := cmd.Output()
+	dump.P(string(output), err)
+
+	assert.NoError(t, err)
+	assert.Contains(t, string(output), "脚本位置：testdata/demo_run_shell.sh")
 
 }
 

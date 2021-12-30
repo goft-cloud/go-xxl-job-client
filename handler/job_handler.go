@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -35,7 +34,7 @@ type JobRunParam struct {
 }
 
 // BuildCmdArgs list
-func (jrp *JobRunParam) BuildCmdArgs(logfile string) []string {
+func (jrp *JobRunParam) BuildCmdArgs(logfile ...string) []string {
 	var cmdArgs = []string{jrp.JobTag}
 
 	if len(jrp.InputParam) > 0 {
@@ -55,7 +54,9 @@ func (jrp *JobRunParam) BuildCmdArgs(logfile string) []string {
 
 	// TIP: use command pipe write log to file.
 	// can also: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
-	cmdArgs = append(cmdArgs, ">>", logfile)
+	if len(logfile) > 0 {
+		cmdArgs = append(cmdArgs, ">>"+logfile[0])
+	}
 
 	return cmdArgs
 }
@@ -85,7 +86,7 @@ func (jrp *JobRunParam) BuildCmdArgsString(logfile string) string {
 
 	// TIP: use command pipe write log to file.
 	// can also: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
-	buffer.WriteString(" >> ")
+	buffer.WriteString(" >>")
 	buffer.WriteString(logfile)
 
 	return buffer.String()
@@ -137,6 +138,7 @@ type JobHandler struct {
 	CallbackFunc func(trigger *JobRunParam, runErr error)
 }
 
+// BeanJobLength size
 func (j *JobHandler) BeanJobLength() int {
 	if j.jobMap == nil {
 		return 0
@@ -144,6 +146,7 @@ func (j *JobHandler) BeanJobLength() int {
 	return len(j.jobMap)
 }
 
+// RegisterJob handler
 func (j *JobHandler) RegisterJob(jobName string, function JobHandlerFunc) {
 	j.Lock()
 	defer j.Unlock()
@@ -198,7 +201,7 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 		Callback: j.CallbackFunc,
 	}
 
-	// use job handler.
+	// switch job exec handler.
 	if trigger.ExecutorHandler != "" {
 		if j.jobMap == nil && len(j.jobMap) <= 0 {
 			return errors.New("bean job handler not found")
@@ -234,23 +237,26 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 func (j *JobHandler) cancelJob(jobId int32) {
 	jobQueue, has := j.QueueMap[jobId]
 	if has {
-		log.Print("job be canceled, id:", jobId)
+		logger.Infof("the job#%d be xxl-job admin canceled", jobId)
 		res := jobQueue.StopJob()
 		if res {
 			if jobQueue.CurrentJob != nil && jobQueue.CurrentJob.CurrentCancelFunc != nil {
 				jobQueue.CurrentJob.CurrentCancelFunc()
 
 				go func() {
-					jobParam := make(map[string]map[string]interface{})
+					logId := jobQueue.CurrentJob.LogId
+
 					logParam := make(map[string]interface{})
-					logParam["logId"] = jobQueue.CurrentJob.LogId
+					logParam["logId"] = logId
 					logParam["jobId"] = jobId
 					logParam["jobName"] = jobQueue.CurrentJob.JobName
 					logParam["jobFunc"] = jobQueue.CurrentJob.JobTag
+
+					jobParam := make(map[string]map[string]interface{})
 					jobParam["logParam"] = logParam
 
 					ctx := context.WithValue(context.Background(), "jobParam", jobParam)
-					logger.LogJob(ctx, "job canceled by admin!")
+					logger.LogJobf(ctx, "job#%d task#%d canceled by admin!", jobId, logId)
 				}()
 			}
 
