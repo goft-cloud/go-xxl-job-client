@@ -63,6 +63,11 @@ func InitLogPath() error {
 	return err
 }
 
+// LogJobf info to file
+func LogJobf(ctx context.Context, tpl string, args ...interface{}) {
+	LogJob(ctx, fmt.Sprintf(tpl, args...))
+}
+
 // LogJob info to file
 func LogJob(ctx context.Context, args ...interface{}) {
 	jobMap := ctx.Value("jobParam")

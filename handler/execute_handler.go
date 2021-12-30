@@ -231,14 +231,41 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 	jobParam["inputParam"] = runParam.InputParam
 	jobParam["sharding"] = shardParam
 
-	valueCtx, canFun := context.WithCancel(context.Background())
+	baseCtx := context.Background()
+
+	// add recover handle
+	defer func() {
+		if err := recover(); err != nil {
+			var (
+				errMsg string
+				ok     bool
+				e      error
+			)
+
+			if errMsg, ok = err.(string); !ok {
+				if e, ok = err.(error); ok {
+					errMsg = e.Error()
+				}
+			}
+
+			if errMsg == "" {
+				errMsg = "system error"
+			}
+
+			ctx := context.WithValue(baseCtx, "jobParam", jobParam)
+			logger.LogJobf(ctx, "job#%d run failed! msg: %s", jobId, errMsg)
+		}
+	}()
+
+	valueCtx, canFun := context.WithCancel(baseCtx)
+	runParam.CurrentCancelFunc = canFun
 	defer canFun()
 
-	runParam.CurrentCancelFunc = canFun
+	// with job params
 	ctx := context.WithValue(valueCtx, "jobParam", jobParam)
 	err := b.RunFunc(ctx)
 	if err != nil {
-		logger.LogJob(ctx, "job#%d run failed! msg:", jobId, err.Error())
+		logger.LogJobf(ctx, "job#%d run failed! msg: %s", jobId, err.Error())
 		return err
 	}
 
