@@ -1,19 +1,97 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/queue"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
+	"github.com/gookit/goutil/strutil"
 )
 
+// JobHandlerFunc func
 type JobHandlerFunc func(ctx context.Context) error
 
+// JobRunParam struct
+type JobRunParam struct {
+	LogId       int64
+	LogDateTime int64
+	JobName     string
+	// JobTag on script, this is script file path.
+	JobTag string
+	// user input params
+	InputParam map[string]interface{}
+	ShardIdx   int32
+	ShardTotal int32
+	// CurrentCancelFunc use for kill running job
+	CurrentCancelFunc context.CancelFunc
+}
+
+// BuildCmdArgs list
+func (jrp *JobRunParam) BuildCmdArgs(logfile string) []string {
+	var cmdArgs = []string{jrp.JobTag}
+
+	if len(jrp.InputParam) > 0 {
+		ps, ok := jrp.InputParam["param"]
+		if ok {
+			// 参数可用换行隔开
+			params := strings.Split(ps.(string), "\n")
+			for _, v := range params {
+				cmdArgs = append(cmdArgs, strings.TrimSpace(v))
+			}
+		}
+	}
+
+	if jrp.ShardTotal > 0 {
+		cmdArgs = append(cmdArgs, strutil.MustString(jrp.ShardIdx), strutil.MustString(jrp.ShardTotal))
+	}
+
+	// TIP: use command pipe write log to file.
+	// can also: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
+	cmdArgs = append(cmdArgs, ">>", logfile)
+
+	return cmdArgs
+}
+
+// BuildCmdArgsString string
+func (jrp *JobRunParam) BuildCmdArgsString(logfile string) string {
+	var buffer bytes.Buffer
+
+	// set job script file
+	buffer.WriteString(jrp.JobTag)
+
+	if len(jrp.InputParam) > 0 {
+		ps, ok := jrp.InputParam["param"]
+		if ok {
+			// 参数可用空格或者换行隔开
+			params := strings.Split(ps.(string), "\n")
+			for _, v := range params {
+				buffer.WriteString(" ")
+				buffer.WriteString(strings.TrimSpace(v))
+			}
+		}
+	}
+
+	if jrp.ShardTotal > 0 {
+		buffer.WriteString(fmt.Sprintf(" %d %d", jrp.ShardIdx, jrp.ShardTotal))
+	}
+
+	// TIP: use command pipe write log to file.
+	// can also: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
+	buffer.WriteString(" >> ")
+	buffer.WriteString(logfile)
+
+	return buffer.String()
+}
+
+// JobQueue struct
 type JobQueue struct {
 	JobId    int32
 	GlueType string
@@ -22,18 +100,6 @@ type JobQueue struct {
 	Run        int32 // 0 stop, 1 run
 	Queue      *queue.Queue
 	Callback   func(trigger *JobRunParam, runErr error)
-}
-
-type JobRunParam struct {
-	LogId       int64
-	LogDateTime int64
-	JobName     string
-	JobTag      string
-	InputParam  map[string]interface{}
-	ShardIdx    int32
-	ShardTotal  int32
-	// CurrentCancelFunc use for kill running job
-	CurrentCancelFunc context.CancelFunc
 }
 
 func (jq *JobQueue) StartJob() {
@@ -104,7 +170,7 @@ func (j *JobHandler) HasRunning(jobId int32) bool {
 
 // PutJobToQueue push job to queue and run it.
 func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) {
-	logger.Debugf("put and start job, info: %#v", trigger)
+	logger.Debugf("put and start job#%d, info: %#v", trigger.JobId, trigger)
 
 	qu, has := j.QueueMap[trigger.JobId] // map value是地址，读不加锁
 	if has {

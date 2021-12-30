@@ -81,7 +81,7 @@ func (s *XxlAdminServer) RegisterExecutor() {
 	if !hasValid {
 		panic("register executor failed, please check xxl admin address OR accessToken")
 	} else {
-		logger.Infof("register the executor: %s(clientIP: %s) to admin OK", s.executor.AppName, regAddr)
+		logger.Infof("register the executor: %s (clientIP: %s) to admin OK", s.executor.AppName, regAddr)
 	}
 }
 

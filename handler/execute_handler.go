@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -60,7 +59,7 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *Job
 	}
 
 	// path := fmt.Sprintf("%s_%d_%d%s", constants.GlueSourcePath, trigger.JobId, trigger.GlueUpdatetime, suffix)
-	path := fmt.Sprintf("%s/gs_%d_%d%s", logger.GlueSourcePath(), trigger.JobId, trigger.GlueUpdatetime, suffix)
+	path := fmt.Sprintf("%s/job%d_%d%s", logger.GlueSourcePath(), trigger.JobId, trigger.GlueUpdatetime, suffix)
 	_, err = os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		s.Lock()
@@ -138,46 +137,32 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 	logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
 
-	var buffer bytes.Buffer
-	buffer.WriteString(runParam.JobTag)
-	if len(runParam.InputParam) > 0 {
-		ps, ok := runParam.InputParam["param"]
-		if ok {
-			// 参数可用空格或者换行隔开
-			params := strings.Split(ps.(string), "\n")
-			for _, v := range params {
-				buffer.WriteString(" ")
-				buffer.WriteString(strings.TrimSpace(v))
-			}
-		}
-	}
-
-	if runParam.ShardTotal > 0 {
-		buffer.WriteString(fmt.Sprintf(" %d %d", runParam.ShardIdx, runParam.ShardTotal))
-	}
-
-	// TIP: use command pipe write log to file.
-	// can also: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
-	buffer.WriteString(" >> ")
-	buffer.WriteString(logfile)
+	// code := runParam.BuildCmdArgsString(logfile)
+	cmdArgs := runParam.BuildCmdArgs(logfile)
+	binName := scriptCmd[glueType]
 
 	cancelCtx, canFun := context.WithCancel(context.Background())
 	defer canFun()
-	c := buffer.String()
-	logger.Debugf("script job contents: %s", c)
-
 	runParam.CurrentCancelFunc = canFun
+
 	// NOTICE: '-c' only for shell script
-	cmd := exec.CommandContext(cancelCtx, scriptCmd[glueType], "-c", c)
+	// cmd = exec.CommandContext(cancelCtx, "bash", "-c", code)
+	// cmd = exec.CommandContext(cancelCtx, binName, "-c", code)
+	cmd := exec.CommandContext(cancelCtx, binName, cmdArgs...)
+	logger.Debugf("will run task script command: %s", cmd.String())
 
 	// cmd.Output() must be waite command complete.
 	output, err := cmd.Output()
 	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			logger.Debugf("run task script command error: %s", ee.Error())
+		}
 		logger.LogJob(ctx, "run script job result:", string(output), ", error: ", err.Error())
 		return err
 	}
 
-	return err
+	logger.Debugf("run task command script success. output: %s", string(output))
+	return nil
 }
 
 type BeanHandler struct {
