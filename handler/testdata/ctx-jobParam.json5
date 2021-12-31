@@ -1,0 +1,15 @@
+{
+  logParam: {
+    jobId: 23,
+    logId: 203,
+    jobName: "some",
+    jobFunc: "xx.handle",
+  },
+  inputParam: {
+    param: "arg0\narg1"
+  },
+  sharding: {
+    shardingIdx: 0,
+    shardingTotal: 0,
+  },
+}

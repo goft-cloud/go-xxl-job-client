@@ -50,16 +50,18 @@ type ScriptHandler struct {
 func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *JobRunParam, err error) {
 	suffix, ok := scriptMap[trigger.GlueType]
 	if !ok {
-		logParam := make(map[string]interface{})
-		logParam["logId"] = trigger.LogId
-		logParam["jobId"] = trigger.JobId
+		// logParam := make(map[string]interface{})
+		// logParam["logId"] = trigger.LogId
+		// logParam["jobId"] = trigger.JobId
+		//
+		// jobParamMap := make(map[string]map[string]interface{})
+		// jobParamMap["logParam"] = logParam
 
-		jobParamMap := make(map[string]map[string]interface{})
-		jobParamMap["logParam"] = logParam
-		ctx := context.WithValue(context.Background(), "jobParam", jobParamMap)
+		cjp := NewCtxJobParamByTpp(trigger)
+		ctx := context.WithValue(context.Background(), "jobParam", cjp)
 
 		msg := "暂不支持" + strings.ToLower(trigger.GlueType[constants.GluePrefixLen:]) + "脚本"
-		logger.LogJob(ctx, "job parse error:", msg)
+		logger.LogJobf(ctx, "job#%d parse error: %s", trigger.JobId, msg)
 		return jobParam, errors.New(msg)
 	}
 
@@ -114,23 +116,26 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *Job
 
 // Execute script job
 func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunParam) error {
-	logParam := make(map[string]interface{})
-	logParam["logId"] = runParam.LogId
-	logParam["jobId"] = jobId
-	logParam["jobName"] = runParam.JobName
-	logParam["jobFunc"] = runParam.JobTag
+	logId := runParam.LogId
+	cjp := NewCtxJobParamByJrp(jobId, runParam)
 
-	shardParam := make(map[string]interface{})
-	shardParam["shardingIdx"] = runParam.ShardIdx
-	shardParam["shardingTotal"] = runParam.ShardTotal
-
-	jobParam := make(map[string]map[string]interface{})
-	jobParam["logParam"] = logParam
-	jobParam["inputParam"] = runParam.InputParam
-	jobParam["sharding"] = shardParam
-
-	logger.Debugf("exec script job#%d, type: %s, params: %v", jobId, glueType, jobParam)
-	ctx := context.WithValue(context.Background(), "jobParam", jobParam)
+	// logParam := make(map[string]interface{})
+	// logParam["jobId"] = jobId
+	// logParam["logId"] = logId
+	// logParam["jobName"] = runParam.JobName
+	// logParam["jobFunc"] = runParam.JobTag
+	//
+	// shardParam := make(map[string]interface{})
+	// shardParam["shardingIdx"] = runParam.ShardIndex
+	// shardParam["shardingTotal"] = runParam.ShardTotal
+	//
+	// jobParam := make(map[string]map[string]interface{})
+	// jobParam["logParam"] = logParam
+	// jobParam["inputParam"] = runParam.InputParam
+	// jobParam["sharding"] = shardParam
+	// dump.P(cjp)
+	logger.Debugf("exec script job#%d task#%d, type: %s, params: %v", jobId, logId, glueType, cjp.String())
+	ctx := context.WithValue(context.Background(), "jobParam", cjp)
 
 	// ensure log dir created.
 	logDir := logger.GetLogPath(time.Now())
@@ -149,47 +154,53 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 	var cmd *exec.Cmd
 
+	// if binName == "bash" {
 	// NOTICE: '-c' only for shell script
-	if binName == "bash" {
-		code := runParam.BuildCmdArgsString(logfile)
-		cmd = exec.CommandContext(cancelCtx, "bash", "-c", code)
-	} else {
-		// TIP: use args the pipe mark >> no effect.
-		// cmdArgs := runParam.BuildCmdArgs(logfile)
-		args := runParam.BuildCmdArgs()
-		cmd = exec.CommandContext(cancelCtx, binName, args...)
-		stdout, _ := cmd.StdoutPipe()
+	// - use command pipe '>>logfile' sync log to file.
+	// code := runParam.BuildCmdArgsString(logfile)
+	// cmd = exec.CommandContext(cancelCtx, "bash", "-c", code)
+	// } else {
+	// TIP: use args the pipe mark >> no effect.
+	// cmdArgs := runParam.BuildCmdArgs(logfile)
+	args := runParam.BuildCmdArgs()
+	cmd = exec.CommandContext(cancelCtx, binName, args...)
+	stdout, _ := cmd.StdoutPipe()
 
-		f, err := logger.OpenLogFile(logfile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		// go io.Copy(io.MultiWriter(f, os.Stdout), stdout)
-		go io.Copy(f, stdout)
-	}
-
-	if runParam.ShardTotal > 0 {
-		cmd.Env = []string{
-			"XXL_SHARD_IDX=" + strutil.MustString(runParam.ShardIdx),
-			"XXL_SHARD_TOTAL=" + strutil.MustString(runParam.ShardTotal),
-		}
-	}
-
-	logger.Debugf("will run task script command: '%s', logfile: %s", cmd.String(), logfile)
-
-	err := cmd.Run()
+	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
+	fh, err := logger.OpenLogFile(logfile)
 	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			logger.Errorf("run task#%d script command error: %s", runParam.LogId, string(ee.Stderr))
-		}
-		logger.LogJob(ctx, "run task#%d script failed, error: ", runParam.LogId, err.Error())
 		return err
 	}
 
-	logger.Debugf("run task#%d command script success", runParam.LogId)
-	return nil
+	// defer fh.Close()
+	// go io.Copy(io.MultiWriter(f, os.Stdout), stdout)
+	go io.Copy(fh, stdout)
+	// }
+
+	if runParam.ShardTotal > 0 {
+		cmd.Env = []string{
+			constants.EnvXxlShardIdx + "=" + strutil.MustString(runParam.ShardIdx),
+			constants.EnvXxlShardTotal + "=" + strutil.MustString(runParam.ShardTotal),
+		}
+	}
+
+	logger.Debugf("job#%d will run task#%d script command: '%s', logfile: %s", jobId, logId, cmd.String(), logfile)
+	if err := cmd.Run(); err != nil {
+		_ = fh.Close() // close log file.
+
+		errMsg := err.Error()
+		if ee, ok := err.(*exec.ExitError); ok {
+			errMsg = string(ee.Stderr)
+			logger.Errorf("run task#%d script command error: %s", logId, errMsg)
+		}
+
+		logger.LogJobf(ctx, "run task#%d script failed, error: %s", logId, errMsg)
+		return err
+	}
+
+	err = fh.Close() // close log file.
+	logger.Debugf("run task#%d command script success", logId)
+	return err
 }
 
 // BeanHandler struct
@@ -200,6 +211,7 @@ type BeanHandler struct {
 // ParseJob info
 func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *JobRunParam, err error) {
 	if b.RunFunc == nil {
+		logger.Errorf("the bean job#%d handler func not registered", trigger.JobId, trigger.LogId)
 		return jobParam, errors.New("job run function not found")
 	}
 
@@ -231,21 +243,24 @@ func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *JobRu
 
 // Execute bean handler func
 func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunParam) error {
-	logParam := make(map[string]interface{})
-	logParam["logId"] = runParam.LogId
-	logParam["jobId"] = jobId
-	logParam["jobName"] = runParam.JobName
-	logParam["jobFunc"] = runParam.JobTag
+	logId := runParam.LogId
+	// see testdata/ctx-jobParam.json5
+	// logParam := make(map[string]interface{})
+	// logParam["jobId"] = jobId
+	// logParam["logId"] = logId
+	// logParam["jobName"] = runParam.JobName
+	// logParam["jobFunc"] = runParam.JobTag
+	//
+	// shardParam := make(map[string]interface{})
+	// shardParam["shardingIdx"] = runParam.ShardIdx
+	// shardParam["shardingTotal"] = runParam.ShardTotal
+	//
+	// jobParam := make(map[string]map[string]interface{})
+	// jobParam["logParam"] = logParam
+	// jobParam["inputParam"] = runParam.InputParam
+	// jobParam["sharding"] = shardParam
 
-	shardParam := make(map[string]interface{})
-	shardParam["shardingIdx"] = runParam.ShardIdx
-	shardParam["shardingTotal"] = runParam.ShardTotal
-
-	jobParam := make(map[string]map[string]interface{})
-	jobParam["logParam"] = logParam
-	jobParam["inputParam"] = runParam.InputParam
-	jobParam["sharding"] = shardParam
-
+	cjp := NewCtxJobParamByJrp(jobId, runParam)
 	baseCtx := context.Background()
 
 	// add recover handle
@@ -267,8 +282,8 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 				errMsg = "system error"
 			}
 
-			ctx := context.WithValue(baseCtx, "jobParam", jobParam)
-			logger.LogJobf(ctx, "job#%d run failed! msg: %s", jobId, errMsg)
+			ctx := context.WithValue(baseCtx, "jobParam", cjp)
+			logger.LogJobf(ctx, "bean job#%d task#%d run fatal! error: %s", jobId, logId, errMsg)
 		}
 	}()
 
@@ -277,10 +292,10 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 	defer canFun()
 
 	// with job params
-	ctx := context.WithValue(valueCtx, "jobParam", jobParam)
+	ctx := context.WithValue(valueCtx, "jobParam", cjp)
 	err := b.RunFunc(ctx)
 	if err != nil {
-		logger.LogJobf(ctx, "job#%d run failed! msg: %s", jobId, err.Error())
+		logger.LogJobf(ctx, "job#%d task#%d run failed! error: %s", jobId, logId, err.Error())
 		return err
 	}
 

@@ -18,6 +18,53 @@ import (
 // JobHandlerFunc func
 type JobHandlerFunc func(ctx context.Context) error
 
+// CtxJobParam struct
+type CtxJobParam struct {
+	JobID   int32
+	LogID   int64
+	JobName string
+	// JobFunc on script mode, is script filepath.
+	JobFunc string
+	// ShardIndex sharding info
+	ShardIndex int32
+	ShardTotal int32
+	// user input param string.
+	InputParam string
+}
+
+// String to string.
+func (cjp *CtxJobParam) String() string {
+	return fmt.Sprintf("%#v", *cjp)
+}
+
+// NewCtxJobParamByTpp create
+func NewCtxJobParamByTpp(ttp *transport.TriggerParam) *CtxJobParam {
+	return &CtxJobParam{
+		JobID: ttp.JobId,
+		LogID: ttp.LogId,
+		// JobName:    "",
+		JobFunc: ttp.ExecutorHandler,
+		// user input param string.
+		InputParam: ttp.ExecutorParams,
+		ShardIndex: ttp.BroadcastIndex,
+		ShardTotal: ttp.BroadcastTotal,
+	}
+}
+
+// NewCtxJobParamByJrp create.
+func NewCtxJobParamByJrp(jobId int32, jrp *JobRunParam) *CtxJobParam {
+	return &CtxJobParam{
+		JobID:   jobId,
+		LogID:   jrp.LogId,
+		JobName: jrp.JobName,
+		JobFunc: jrp.JobTag,
+		// user input param string.
+		InputParam: jrp.InputParam["param"].(string),
+		ShardIndex: jrp.ShardIdx,
+		ShardTotal: jrp.ShardTotal,
+	}
+}
+
 // JobRunParam struct
 type JobRunParam struct {
 	LogId       int64
@@ -103,12 +150,14 @@ type JobQueue struct {
 	Callback   func(trigger *JobRunParam, runErr error)
 }
 
+// StartJob run
 func (jq *JobQueue) StartJob() {
 	if atomic.CompareAndSwapInt32(&jq.Run, 0, 1) {
 		jq.asyRunJob()
 	}
 }
 
+// StopJob check
 func (jq *JobQueue) StopJob() bool {
 	return atomic.CompareAndSwapInt32(&jq.Run, 1, 0)
 }
@@ -128,6 +177,7 @@ func (jq *JobQueue) asyRunJob() {
 	}()
 }
 
+// JobHandler struct
 type JobHandler struct {
 	sync.RWMutex
 
