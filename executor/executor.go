@@ -5,6 +5,7 @@ import (
 	"net"
 )
 
+// Executor struct
 type Executor struct {
 	Protocol    string
 	AppName     string
@@ -12,6 +13,7 @@ type Executor struct {
 	gettyClient *GettyClient
 }
 
+// NewExecutor create.
 func NewExecutor(protocol, appName string, port int) *Executor {
 	return &Executor{
 		Protocol: protocol,
@@ -19,6 +21,7 @@ func NewExecutor(protocol, appName string, port int) *Executor {
 		Port:     port,
 	}
 }
+
 func (e *Executor) SetClient(gettyClient *GettyClient) {
 	e.gettyClient = gettyClient
 }

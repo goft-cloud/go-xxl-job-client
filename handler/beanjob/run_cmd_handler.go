@@ -11,7 +11,7 @@ type RunCmdHandler struct {
 }
 
 // NewCmdHandler bean handler
-func NewCmdHandler() handler.JobHandlerFunc {
+func NewCmdHandler() handler.BeanJobRunFunc {
 	ch := &RunCmdHandler{}
 	return ch.Handle
 }

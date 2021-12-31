@@ -29,6 +29,7 @@ func NewRequestProcess(adminServer *admin.XxlAdminServer, handler RequestHandler
 		adminServer: adminServer,
 		ReqHandler:  handler,
 	}
+
 	jobHandler := &JobHandler{
 		QueueMap:     make(map[int32]*JobQueue),
 		CallbackFunc: requestHandler.jobRunCallback,
@@ -38,8 +39,9 @@ func NewRequestProcess(adminServer *admin.XxlAdminServer, handler RequestHandler
 	return requestHandler
 }
 
-func (j *RequestProcess) RegisterJob(jobName string, function JobHandlerFunc) {
-	j.JobHandler.RegisterJob(jobName, function)
+// RegisterJob to job handler manager
+func (j *RequestProcess) RegisterJob(jobName string, beanJobFn BeanJobRunFunc) {
+	j.JobHandler.RegisterJob(jobName, beanJobFn)
 }
 
 func (j *RequestProcess) pushJob(trigger *transport.TriggerParam) {

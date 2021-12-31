@@ -1,8 +1,6 @@
 package xxl
 
 import (
-	"context"
-
 	"github.com/apache/dubbo-go-hessian2"
 	"github.com/dubbogo/getty"
 	"github.com/goft-cloud/go-xxl-job-client/v2/admin"
@@ -117,7 +115,7 @@ func (c *XxlClient) Run() error {
 }
 
 // RegisterJob add job handler.
-func (c *XxlClient) RegisterJob(jobName string, function handler.JobHandlerFunc) {
+func (c *XxlClient) RegisterJob(jobName string, function handler.BeanJobRunFunc) {
 	c.requestHandler.RegisterJob(jobName, function)
 }
 
@@ -134,39 +132,4 @@ func (c *XxlClient) Unregister() {
 // Options gets
 func (c *XxlClient) Options() option.ClientOptions {
 	return c.options
-}
-
-func GetParam(ctx context.Context, key string) (val string, has bool) {
-	jobMap := ctx.Value("jobParam")
-	if jobMap != nil {
-		inputParam, ok := jobMap.(map[string]map[string]interface{})["inputParam"]
-		if ok {
-			val, vok := inputParam[key]
-			if vok {
-				return val.(string), true
-			}
-		}
-	}
-
-	return "", false
-}
-
-func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
-	jobMap := ctx.Value("jobParam")
-
-	if jobMap != nil {
-		shardingParam, ok := jobMap.(map[string]map[string]interface{})["sharding"]
-		if ok {
-			idx, vok := shardingParam["shardingIdx"]
-			if vok {
-				shardingIdx = idx.(int32)
-			}
-			total, ok := shardingParam["shardingTotal"]
-			if ok {
-				shardingTotal = total.(int32)
-			}
-		}
-	}
-
-	return shardingIdx, shardingTotal
 }

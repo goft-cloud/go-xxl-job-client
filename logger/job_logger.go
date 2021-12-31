@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
+	"github.com/goft-cloud/go-xxl-job-client/v2/param"
+	"github.com/gookit/goutil/strutil"
 )
 
 var logBasPath string
@@ -57,7 +58,6 @@ func InitLogPath() error {
 	_, err := os.Stat(GetLogPath(time.Now()))
 	if err != nil && os.IsNotExist(err) {
 		err = os.MkdirAll(logBasPath, os.ModePerm)
-		// err = os.MkdirAll(logBasPath, 0775)
 	}
 
 	return err
@@ -70,50 +70,39 @@ func LogJobf(ctx context.Context, tpl string, args ...interface{}) {
 
 // LogJob info to file
 func LogJob(ctx context.Context, args ...interface{}) {
-	jobMap := ctx.Value("jobParam")
-	if jobMap != nil {
-		jobParamMap, ok := jobMap.(map[string]map[string]interface{})["logParam"]
-		if ok {
-			logid, ok := jobParamMap["logId"]
-			if ok {
-				nowTime := time.Now()
+	val := ctx.Value(constants.CtxParamKey)
+	if val == nil {
+		Errorf("the job task ctx %s not exists", constants.CtxParamKey)
+		return
+	}
 
-				var buffer bytes.Buffer
-				buffer.WriteString(nowTime.Format(constants.DateTimeFormat))
-				buffer.WriteString("  [")
+	if cjp, ok := val.(*param.CtxJobParam); ok {
+		nowTime := time.Now()
 
-				jobName, ok := jobParamMap["jobName"]
-				if ok {
-					buffer.WriteString(jobName.(string))
-				}
-				buffer.WriteString("#")
-				jobFunc, ok := jobParamMap["jobFunc"]
-				if ok {
-					buffer.WriteString(jobFunc.(string))
-				}
-				buffer.WriteString("]-[")
+		var buffer bytes.Buffer
+		buffer.WriteString(nowTime.Format(constants.DateTimeFormat))
+		buffer.WriteString(" [")
+		buffer.WriteString(cjp.JobName)
 
-				jobId, ok := jobParamMap["jobId"]
-				if ok {
-					buffer.WriteString(fmt.Sprintf("jobId:%d", jobId.(int32)))
-				}
-				buffer.WriteString("]  ")
-				if len(args) > 0 {
-					for _, arg := range args {
-						buffer.WriteString(fmt.Sprintf("%v", arg))
-					}
-				}
-				buffer.WriteString("\r\n")
+		buffer.WriteString("#")
+		buffer.WriteString(cjp.JobFunc)
+		buffer.WriteString("]-[")
 
-				logId := logid.(int64)
-				writeLog(GetLogPath(nowTime), LogfileName(logId), buffer.String())
-			}
+		buffer.WriteString(strutil.MustString(cjp.JobID))
+		buffer.WriteString("]  ")
+
+		if len(args) > 0 {
+			buffer.WriteString(fmt.Sprintln(args...))
+		} else {
+			buffer.WriteString("\n")
 		}
+
+		writeLog(GetLogPath(nowTime), LogfileName(cjp.LogID), buffer.String())
 	}
 }
 
 func writeLog(logPath, logFile, msg string) error {
-	if strings.Trim(logFile, " ") != "" {
+	if !strutil.IsBlank(logFile) {
 		file, err := OpenDirFile(logPath, logFile)
 		if err != nil {
 			return err

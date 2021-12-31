@@ -66,7 +66,6 @@ func (h *RpcRequestHandler) Log(ctx context.Context, r interface{}) (log *logger
 	fromLine := req.Parameters[2].(int32)
 
 	logger.Debugf("fetch job logs. logId: %d, start-line: %d, reqId: %s", logId, fromLine, req.RequestId)
-
 	line, content := logger.ReadLog(req.Parameters[0].(int64), req.Parameters[1].(int64), fromLine)
 
 	log = &logger.LogResult{

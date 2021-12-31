@@ -1,0 +1,115 @@
+package handler
+
+import (
+	"context"
+	"errors"
+	"strings"
+
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
+	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
+	"github.com/gookit/goutil"
+	"github.com/gookit/goutil/strutil"
+)
+
+// BeanJobRunner interface
+type BeanJobRunner interface {
+	Handle(ctx context.Context) error
+}
+
+// BeanJobRunFunc func
+type BeanJobRunFunc func(ctx context.Context) error
+
+// Handle bean job task func
+func (bf BeanJobRunFunc) Handle(ctx context.Context) error {
+	return bf(ctx)
+}
+
+// BeanHandler struct
+type BeanHandler struct {
+	RunFunc BeanJobRunFunc
+}
+
+// ParseJob info
+func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jrp *JobRunParam, err error) {
+	if b.RunFunc == nil {
+		logger.Errorf("the bean job#%d handler func not registered", trigger.JobId, trigger.LogId)
+		return jrp, errors.New("job run function not found")
+	}
+
+	inputParam := make(map[string]string)
+	// ensure 'fullParam' key always exists.
+	inputParam["fullParam"] = trigger.ExecutorParams
+
+	if trigger.ExecutorParams != "" {
+		params := strings.Split(trigger.ExecutorParams, "\n")
+		if len(params) > 0 {
+			for _, param := range params {
+				if param != "" {
+					// jobP := strings.SplitN(param, "=", 2)
+					jobP := strutil.SplitNTrimmed(param, "=", 2)
+					if len(jobP) > 1 {
+						inputParam[jobP[0]] = jobP[1]
+					}
+				}
+			}
+		}
+	}
+
+	// funName := getFuncName(b.RunFunc)
+	funName := goutil.FuncName(b.RunFunc)
+	jrp = &JobRunParam{
+		LogId:       trigger.LogId,
+		LogDateTime: trigger.LogDateTime,
+		JobName:     trigger.ExecutorHandler,
+		JobTag:      funName,
+		InputParam:  inputParam,
+	}
+	return jrp, err
+}
+
+// Execute bean handler func
+func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunParam) error {
+	logId := runParam.LogId
+
+	cjp := NewCtxJobParamByJrp(jobId, runParam)
+	baseCtx := context.Background()
+
+	// add recover handle
+	defer func() {
+		if err := recover(); err != nil {
+			var (
+				errMsg string
+				ok     bool
+				e      error
+			)
+
+			if errMsg, ok = err.(string); !ok {
+				if e, ok = err.(error); ok {
+					errMsg = e.Error()
+				}
+			}
+
+			if errMsg == "" {
+				errMsg = "system error"
+			}
+
+			ctx := context.WithValue(baseCtx, constants.CtxParamKey, cjp)
+			logger.LogJobf(ctx, "bean job#%d task#%d run fatal! error: %s", jobId, logId, errMsg)
+		}
+	}()
+
+	valueCtx, canFun := context.WithCancel(baseCtx)
+	runParam.CurrentCancelFunc = canFun
+	defer canFun()
+
+	// with job params
+	ctx := context.WithValue(valueCtx, constants.CtxParamKey, cjp)
+	err := b.RunFunc(ctx)
+	if err != nil {
+		logger.LogJobf(ctx, "job#%d task#%d run failed! error: %s", jobId, logId, err.Error())
+		return err
+	}
+
+	return err
+}

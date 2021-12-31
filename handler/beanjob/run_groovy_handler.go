@@ -11,7 +11,7 @@ type GroovyHandler struct {
 }
 
 // NewGroovyHandler bean handler
-func NewGroovyHandler() handler.JobHandlerFunc {
+func NewGroovyHandler() handler.BeanJobRunFunc {
 	gh := &GroovyHandler{}
 	return gh.Handle
 }

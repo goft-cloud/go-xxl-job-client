@@ -15,5 +15,6 @@ type RequestHandler interface {
 	IdleBeat(ctx context.Context, r interface{}) (jobId int32, err error)
 	Run(ctx context.Context, r interface{}) (triggerParam *transport.TriggerParam, err error)
 	Kill(ctx context.Context, r interface{}) (jobId int32, err error)
+	// Log fetch job logs
 	Log(ctx context.Context, r interface{}) (log *logger.LogResult, err error)
 }

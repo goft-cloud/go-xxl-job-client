@@ -9,4 +9,12 @@ const (
 	GluePrefixLen  = len(GluePrefix)
 
 	HttpProtocol = "http"
+
+	// CtxParamKey name
+	CtxParamKey = "jobParam"
+
+	// EnvXxlShardIdx env name
+	EnvXxlShardIdx = "XXL_SHARD_IDX"
+	// EnvXxlShardTotal env name
+	EnvXxlShardTotal = "XXL_SHARD_TOTAL"
 )

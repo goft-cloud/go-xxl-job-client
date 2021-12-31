@@ -9,37 +9,17 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/goft-cloud/go-xxl-job-client/v2/param"
 	"github.com/goft-cloud/go-xxl-job-client/v2/queue"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 	"github.com/gookit/goutil/strutil"
 )
 
-// JobHandlerFunc func
-type JobHandlerFunc func(ctx context.Context) error
-
-// CtxJobParam struct
-type CtxJobParam struct {
-	JobID   int32
-	LogID   int64
-	JobName string
-	// JobFunc on script mode, is script filepath.
-	JobFunc string
-	// ShardIndex sharding info
-	ShardIndex int32
-	ShardTotal int32
-	// user input param string.
-	InputParam string
-}
-
-// String to string.
-func (cjp *CtxJobParam) String() string {
-	return fmt.Sprintf("%#v", *cjp)
-}
-
 // NewCtxJobParamByTpp create
-func NewCtxJobParamByTpp(ttp *transport.TriggerParam) *CtxJobParam {
-	return &CtxJobParam{
+func NewCtxJobParamByTpp(ttp *transport.TriggerParam) *param.CtxJobParam {
+	return &param.CtxJobParam{
 		JobID: ttp.JobId,
 		LogID: ttp.LogId,
 		// JobName:    "",
@@ -52,14 +32,16 @@ func NewCtxJobParamByTpp(ttp *transport.TriggerParam) *CtxJobParam {
 }
 
 // NewCtxJobParamByJrp create.
-func NewCtxJobParamByJrp(jobId int32, jrp *JobRunParam) *CtxJobParam {
-	return &CtxJobParam{
+func NewCtxJobParamByJrp(jobId int32, jrp *JobRunParam) *param.CtxJobParam {
+	return &param.CtxJobParam{
 		JobID:   jobId,
 		LogID:   jrp.LogId,
 		JobName: jrp.JobName,
 		JobFunc: jrp.JobTag,
 		// user input param string.
-		InputParam: jrp.InputParam["param"].(string),
+		InputParam:  jrp.InputParam["fullParam"],
+		InputParams: jrp.InputParam,
+		// sharding params
 		ShardIndex: jrp.ShardIdx,
 		ShardTotal: jrp.ShardTotal,
 	}
@@ -72,12 +54,17 @@ type JobRunParam struct {
 	JobName     string
 	// JobTag on script, this is script file path.
 	JobTag string
-	// user input params
-	InputParam map[string]interface{}
+	// InputParam user input params, key 'fullParam' always exists.
+	InputParam map[string]string
 	ShardIdx   int32
 	ShardTotal int32
 	// CurrentCancelFunc use for kill running job
 	CurrentCancelFunc context.CancelFunc
+}
+
+// NewJobRunParam create
+func NewJobRunParam(ttp *transport.TriggerParam) *JobRunParam {
+	return &JobRunParam{}
 }
 
 // BuildCmdArgs list
@@ -85,10 +72,10 @@ func (jrp *JobRunParam) BuildCmdArgs(logfile ...string) []string {
 	var cmdArgs = []string{jrp.JobTag}
 
 	if len(jrp.InputParam) > 0 {
-		ps, ok := jrp.InputParam["param"]
+		ps, ok := jrp.InputParam["fullParam"]
 		if ok {
 			// 参数可用换行隔开
-			params := strings.Split(ps.(string), "\n")
+			params := strings.Split(ps, "\n")
 			for _, v := range params {
 				cmdArgs = append(cmdArgs, strings.TrimSpace(v))
 			}
@@ -116,10 +103,10 @@ func (jrp *JobRunParam) BuildCmdArgsString(logfile string) string {
 	buffer.WriteString(jrp.JobTag)
 
 	if len(jrp.InputParam) > 0 {
-		ps, ok := jrp.InputParam["param"]
+		ps, ok := jrp.InputParam["fullParam"]
 		if ok {
 			// 参数可用空格或者换行隔开
-			params := strings.Split(ps.(string), "\n")
+			params := strings.Split(ps, "\n")
 			for _, v := range params {
 				buffer.WriteString(" ")
 				buffer.WriteString(strings.TrimSpace(v))
@@ -139,13 +126,21 @@ func (jrp *JobRunParam) BuildCmdArgsString(logfile string) string {
 	return buffer.String()
 }
 
+// ExecuteHandler interface
+type ExecuteHandler interface {
+	ParseJob(trigger *transport.TriggerParam) (runParam *JobRunParam, err error)
+	Execute(jobId int32, glueType string, runParam *JobRunParam) error
+}
+
 // JobQueue struct
 type JobQueue struct {
-	JobId    int32
-	GlueType string
 	ExecuteHandler
+	// JobId value
+	JobId int32
+	Run   int32 // 0 stop, 1 run
+	// GlueType name
+	GlueType   string
 	CurrentJob *JobRunParam
-	Run        int32 // 0 stop, 1 run
 	Queue      *queue.Queue
 	Callback   func(trigger *JobRunParam, runErr error)
 }
@@ -181,8 +176,7 @@ func (jq *JobQueue) asyRunJob() {
 type JobHandler struct {
 	sync.RWMutex
 
-	jobMap map[string]JobHandlerFunc
-
+	jobMap   map[string]BeanJobRunFunc
 	QueueMap map[int32]*JobQueue
 
 	CallbackFunc func(trigger *JobRunParam, runErr error)
@@ -197,18 +191,18 @@ func (j *JobHandler) BeanJobLength() int {
 }
 
 // RegisterJob handler
-func (j *JobHandler) RegisterJob(jobName string, function JobHandlerFunc) {
+func (j *JobHandler) RegisterJob(jobName string, beanJobFn BeanJobRunFunc) {
 	j.Lock()
 	defer j.Unlock()
 	if j.jobMap == nil {
-		j.jobMap = make(map[string]JobHandlerFunc)
+		j.jobMap = make(map[string]BeanJobRunFunc)
 	} else {
 		_, ok := j.jobMap[jobName]
 		if ok {
 			panic("the job had already register, job name can't be repeated:" + jobName)
 		}
 	}
-	j.jobMap[jobName] = function
+	j.jobMap[jobName] = beanJobFn
 }
 
 func (j *JobHandler) HasRunning(jobId int32) bool {
@@ -272,6 +266,7 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 	if err != nil {
 		return err
 	}
+
 	q := queue.NewQueue()
 	err = q.Put(runParam)
 	if err != nil {
@@ -296,16 +291,15 @@ func (j *JobHandler) cancelJob(jobId int32) {
 				go func() {
 					logId := jobQueue.CurrentJob.LogId
 
-					logParam := make(map[string]interface{})
-					logParam["logId"] = logId
-					logParam["jobId"] = jobId
-					logParam["jobName"] = jobQueue.CurrentJob.JobName
-					logParam["jobFunc"] = jobQueue.CurrentJob.JobTag
+					// logParam := make(map[string]interface{})
+					// logParam["logId"] = logId
+					// logParam["jobId"] = jobId
+					// logParam["jobName"] = jobQueue.CurrentJob.JobName
+					// logParam["jobFunc"] = jobQueue.CurrentJob.JobTag
 
-					jobParam := make(map[string]map[string]interface{})
-					jobParam["logParam"] = logParam
+					cjp := NewCtxJobParamByJrp(jobId, jobQueue.CurrentJob)
+					ctx := context.WithValue(context.Background(), constants.CtxParamKey, cjp)
 
-					ctx := context.WithValue(context.Background(), "jobParam", jobParam)
 					logger.LogJobf(ctx, "job#%d task#%d canceled by admin!", jobId, logId)
 				}()
 			}
@@ -318,6 +312,6 @@ func (j *JobHandler) cancelJob(jobId int32) {
 }
 
 func (j *JobHandler) clearJob() {
-	j.jobMap = map[string]JobHandlerFunc{}
+	j.jobMap = map[string]BeanJobRunFunc{}
 	j.QueueMap = make(map[int32]*JobQueue)
 }
