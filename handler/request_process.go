@@ -98,7 +98,8 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 	} else {
 		isOld = reqId != ""
 		isContinue := reqId == ""
-		if reqId != "" && "BEAT_PING_PONG" != reqId { // 老版本,处理非心跳请求
+		// 老版本,处理非心跳请求
+		if reqId != "" && "BEAT_PING_PONG" != reqId {
 			response.RequestId = reqId
 			isContinue = true
 		}

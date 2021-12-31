@@ -51,7 +51,7 @@ func NewClientOptions(opts ...Option) ClientOptions {
 		Port:        defaultPort,
 		Timeout:     defaultTimeout,
 		BeatTime:    defaultBeatTime,
-		LogBasePath: constants.BasePath,
+		LogBasePath: constants.LogBasePath,
 	}
 
 	for _, o := range opts {

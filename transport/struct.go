@@ -18,6 +18,7 @@ func (XxlRpcRequest) JavaClassName() string {
 	return "com.xxl.rpc.remoting.net.params.XxlRpcRequest"
 }
 
+// TriggerParam struct
 type TriggerParam struct {
 	JobId                 int32
 	ExecutorHandler       string
@@ -41,6 +42,7 @@ func (TriggerParam) JavaClassName() string {
 // 	return
 // }
 
+// Beat struct
 type Beat struct {
 	RequestId        string
 	CreateMillisTime int64
@@ -56,6 +58,7 @@ func (Beat) JavaClassName() string {
 	return "com.xxl.rpc.remoting.net.params.Beat$1"
 }
 
+// XxlRpcResponse struct
 type XxlRpcResponse struct {
 	RequestId string
 	ErrorMsg  interface{}
@@ -96,9 +99,9 @@ func (RegistryParam) JavaClassName() string {
 	return "com.xxl.job.core.biz.model.RegistryParam"
 }
 
-// xxl-job v2.2
+// LogRequest struct xxl-job v2.2
 type LogRequest struct {
-	LogDateTim  int64 `json:"logDateTim"`
 	LogId       int64 `json:"logId"`
+	LogDateTim  int64 `json:"logDateTim"`
 	FromLineNum int32 `json:"fromLineNum"`
 }

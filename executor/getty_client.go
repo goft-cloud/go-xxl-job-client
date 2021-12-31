@@ -12,6 +12,7 @@ import (
 
 	getty "github.com/apache/dubbo-getty"
 	gxsync "github.com/dubbogo/gost/sync"
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 )
 
@@ -116,10 +117,12 @@ func (c *GettyClient) initialSession(session getty.Session) (err error) {
 	session.SetMaxMsgLen(maxMsgLen)
 	// set @session's Write queue size
 	// session.SetWQLen(wqLen)
+	session.SetWaitTime(time.Second)
 	session.SetReadTimeout(time.Second)
 	session.SetWriteTimeout(writeTimeout)
-	session.SetCronPeriod(int(cronPeriod))
-	session.SetWaitTime(time.Second)
+	// SetCronPeriod unit is: millisecond
+	session.SetCronPeriod(int(constants.CronPeriod / 1e6))
+
 	session.SetPkgHandler(c.PkgHandler)
 	session.SetEventListener(c.EventListener)
 	return err
