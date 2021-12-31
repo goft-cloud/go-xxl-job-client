@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dubbogo/getty"
+	getty "github.com/apache/dubbo-getty"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
@@ -63,6 +63,7 @@ func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 
 func (h *MessageHandler) OnCron(session getty.Session) {
 	active := session.GetActive()
+
 	if cronTime < time.Since(active).Nanoseconds() {
 		logger.Infof("OnCorn session{%s} timeout{%s}", session.Stat(), time.Since(active).String())
 		session.Close()
@@ -76,7 +77,8 @@ func reply(session getty.Session, resBy []byte, err error) {
 		pkg = transport.NewHttpResponsePkg(http.StatusInternalServerError, resBy)
 	}
 
-	if err := session.WritePkg(pkg, writePkgTimeout); err != nil {
-		logger.Errorf("WritePkg error: %#v, %#v", pkg, err)
+	_, _, err = session.WritePkg(pkg, writePkgTimeout)
+	if err != nil {
+		logger.Errorf("WritePkg error: %#v, pkg: %#v", err, pkg)
 	}
 }

@@ -3,7 +3,7 @@ package transport
 import (
 	"sync"
 
-	"github.com/dubbogo/getty"
+	getty "github.com/apache/dubbo-getty"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 )
 
@@ -27,6 +27,7 @@ func (c *GettyRPCClient) AddSession(session getty.Session) {
 	c.sessions = append(c.sessions, session)
 }
 
+// RemoveSession from sessions
 func (c *GettyRPCClient) RemoveSession(session getty.Session) {
 	if session == nil {
 		return
@@ -41,10 +42,10 @@ func (c *GettyRPCClient) RemoveSession(session getty.Session) {
 	for i, s := range c.sessions {
 		if s == session {
 			c.sessions = append(c.sessions[:i], c.sessions[i+1:]...)
-			logger.Infof("delete session{%s}, its index{%d}", session.Stat(), i)
+			logger.Infof("remove session{%s}, its index{%d}", session.Stat(), i)
 			break
 		}
 	}
 
-	logger.Infof("after remove session{%s}, left session number:%d", session.Stat(), len(c.sessions))
+	logger.Infof("after remove session{%s}, left number:%d", session.Stat(), len(c.sessions))
 }

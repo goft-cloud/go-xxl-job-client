@@ -199,4 +199,4 @@ xxl_job_admin 地址不通或者accessToken错误，请检查是否配置了Admi
 [1]: https://github.com/xuxueli/xxl-job
 [2]: https://github.com/apache/dubbo-go-hessian2
 [3]: https://github.com/xuxueli/xxl-rpc
-[4]: https://github.com/dubbogo/getty
+[4]: https://github.com/apache/dubbo-getty

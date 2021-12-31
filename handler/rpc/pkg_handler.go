@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	getty "github.com/apache/dubbo-getty"
 	"github.com/apache/dubbo-go-hessian2"
-	"github.com/dubbogo/getty"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
@@ -15,12 +15,14 @@ const (
 	pkgSplitStr   = "POST"
 )
 
+// PkgHandlerRes struct
 type PkgHandlerRes struct {
 	LastPkg     []byte
 	LastSuccess bool
 	Valid       bool
 }
 
+// PackageHandler struct
 type PackageHandler struct {
 	pkgHandlerRes *PkgHandlerRes
 }

@@ -10,16 +10,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dubbogo/getty"
-	"github.com/dubbogo/gost/sync"
+	getty "github.com/apache/dubbo-getty"
+	gxsync "github.com/dubbogo/gost/sync"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 )
 
 const (
-	cronPeriod      = 20e9 / 1e6
-	queueLen        = 128
-	maxMsgLen       = 102400
-	wqLen           = 512
+	queueLen = 128
+	// 128 * 1024 // max message package length is 128k
+	maxMsgLen = 102400
+	// wqLen = 512
+	cronPeriod = 20e9 / 1e6
+
 	keepAliveTime   = 3 * time.Minute
 	writeTimeout    = 5 * time.Second
 	ReadBufferSize  = 262144
@@ -28,7 +30,8 @@ const (
 
 var (
 	onceTaskPoll sync.Once
-	taskPool     *gxsync.TaskPool
+	// taskPool     *gxsync.TaskPool
+	taskPool gxsync.GenericTaskPool
 )
 
 // GettyClient client server struct
@@ -51,6 +54,7 @@ func NewGettyClient(pkgHandler getty.ReadWriter, eventListener getty.EventListen
 
 func (c *GettyClient) Run(port, taskSize int) {
 	onceTaskPoll.Do(func() {
+		// gxsync.NewTaskPoolSimple()
 		taskPool = gxsync.NewTaskPool(
 			gxsync.WithTaskPoolTaskQueueLength(queueLen),
 			gxsync.WithTaskPoolTaskQueueNumber(taskSize),
@@ -61,17 +65,16 @@ func (c *GettyClient) Run(port, taskSize int) {
 	portStr := ":" + strconv.Itoa(port)
 	server := getty.NewTCPServer(
 		getty.WithLocalAddress(portStr),
+		getty.WithServerTaskPool(taskPool),
 	)
 
-	server.RunEventLoop(func(session getty.Session) error {
-		err := c.initialSession(session)
+	server.RunEventLoop(func(session getty.Session) (err error) {
+		err = c.initialSession(session)
 		if err != nil {
 			return err
 		}
-		if taskPool != nil {
-			session.SetTaskPool(taskPool)
-		}
-		return err
+
+		return
 	})
 
 	// util.WaitCloseSignals(server)
@@ -86,6 +89,8 @@ func (c *GettyClient) Run(port, taskSize int) {
 }
 
 func (c *GettyClient) initialSession(session getty.Session) (err error) {
+	// session.SetCompressType(getty.CompressZip)
+
 	tcpConn, ok := session.Conn().(*net.TCPConn)
 	if !ok {
 		panic(fmt.Sprintf("newSession: %s, session.conn{%#v} is not tcp connection", session.Stat(), session.Conn()))
@@ -109,7 +114,8 @@ func (c *GettyClient) initialSession(session getty.Session) (err error) {
 
 	session.SetName("tcp")
 	session.SetMaxMsgLen(maxMsgLen)
-	session.SetWQLen(wqLen)
+	// set @session's Write queue size
+	// session.SetWQLen(wqLen)
 	session.SetReadTimeout(time.Second)
 	session.SetWriteTimeout(writeTimeout)
 	session.SetCronPeriod(int(cronPeriod))

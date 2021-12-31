@@ -1,8 +1,8 @@
 package xxl
 
 import (
+	getty "github.com/apache/dubbo-getty"
 	"github.com/apache/dubbo-go-hessian2"
-	"github.com/dubbogo/getty"
 	"github.com/goft-cloud/go-xxl-job-client/v2/admin"
 	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	executor2 "github.com/goft-cloud/go-xxl-job-client/v2/executor"
