@@ -43,13 +43,14 @@ func (h *MessageHandler) OnError(session getty.Session, err error) {
 
 func (h *MessageHandler) OnClose(session getty.Session) {
 	logger.Infof("OnClose session{%s} is closing......", session.Stat())
+
 	h.GettyClient.RemoveSession(session)
 }
 
 func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 	s, ok := pkg.([]*transport.HttpRequestPkg)
 	if !ok {
-		logger.Errorf("illegal package: {%#v}", pkg)
+		logger.Errorf("Http.OnMessage - illegal package: {%#v}", pkg)
 		return
 	}
 
@@ -65,7 +66,7 @@ func (h *MessageHandler) OnCron(session getty.Session) {
 	active := session.GetActive()
 
 	if cronTime < time.Since(active).Nanoseconds() {
-		logger.Infof("OnCorn session{%s} timeout{%s}", session.Stat(), time.Since(active).String())
+		logger.Infof("Http.OnCorn - session{%s} timeout{%s}", session.Stat(), time.Since(active).String())
 		session.Close()
 		h.GettyClient.RemoveSession(session)
 	}
@@ -79,6 +80,6 @@ func reply(session getty.Session, resBy []byte, err error) {
 
 	_, _, err = session.WritePkg(pkg, writePkgTimeout)
 	if err != nil {
-		logger.Errorf("WritePkg error: %#v, pkg: %#v", err, pkg)
+		logger.Errorf("Http.WritePkg error: %#v, pkg: %#v", err, pkg)
 	}
 }

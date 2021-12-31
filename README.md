@@ -36,7 +36,7 @@ xxj-job 是一个 Java 实现的分布式任务调度平台，具体实现与使
 
 详细步骤请参考[https://github.com/xuxueli/xxl-job][1]， 此处不再描述 admin 的部署。
 
-## 部署 xxl-job 执行器（go版本）
+## 部署 xxl-job Go执行器
 
 ### (1) 引入 go 客户端依赖
 

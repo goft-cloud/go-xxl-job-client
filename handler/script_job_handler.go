@@ -162,14 +162,14 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		errMsg := err.Error()
 		if ee, ok := err.(*exec.ExitError); ok {
 			errMsg = string(ee.Stderr)
-			logger.Errorf("run task#%d script command error: %s", logId, errMsg)
+			logger.Errorf("job#%d - run task#%d script command error: %s", jobId, logId, errMsg)
 		}
 
-		logger.LogJobf(ctx, "run task#%d script failed, error: %s", logId, errMsg)
+		logger.LogJobf(ctx, "job#%d - run task#%d script failed, error: %s", jobId, logId, errMsg)
 		return err
 	}
 
 	err = fh.Close() // close log file.
-	logger.Debugf("run task#%d command script success", logId)
+	logger.Debugf("job#%d - run task#%d command script success", jobId, logId)
 	return err
 }
