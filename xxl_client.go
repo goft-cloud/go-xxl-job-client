@@ -99,7 +99,7 @@ func (c *XxlClient) MustRun() {
 func (c *XxlClient) Run() error {
 	logger.Infof("go executor client run on mode: %s", option.RunMode())
 	logger.Infof("xxl-job admin address list is: %v", c.options.AdminAddr)
-	// logger.Infof("registered executor name is: %s", c.executor.AppName)
+	logger.Debugf("the go executor name is: %s, enableHttp: %v", c.executor.AppName, c.options.EnableHttp)
 
 	// register to xxl-job admin
 	c.requestHandler.RegisterExecutor()

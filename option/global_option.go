@@ -1,6 +1,10 @@
 package option
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/gookit/goutil/strutil"
+)
 
 // modeType global option
 type modeType string
@@ -25,6 +29,10 @@ func SetRunMode(mt modeType) {
 
 // SetRunModeByString type
 func SetRunModeByString(mt string) {
+	if strutil.IsBlank(mt) {
+		return
+	}
+
 	mt = strings.ToUpper(mt)
 	if mt == ModeDebug.String() {
 		SetRunMode(ModeDebug)

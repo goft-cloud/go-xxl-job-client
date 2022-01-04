@@ -74,6 +74,7 @@ func RegisterJobExecutor(address string, accessToken map[string]string, param *t
 		return nil, err
 	}
 
+	// logger.Debugf("Request API - Register Job Executor, resp: %#v, headers: %#v", respMap, resp.Header)
 	return respMap, nil
 }
 

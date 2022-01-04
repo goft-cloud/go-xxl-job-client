@@ -6,6 +6,7 @@ import (
 	"time"
 
 	getty "github.com/apache/dubbo-getty"
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
@@ -31,18 +32,18 @@ func NewHttpMessageHandler(transport *transport.GettyRPCClient, msgHandler func(
 
 // OnOpen session
 func (h *MessageHandler) OnOpen(session getty.Session) error {
-	logger.Infof("OnOpen session: %s", session.Stat())
+	logger.Infof("Http.OnOpen - session: %s", session.Stat())
 
 	h.GettyClient.AddSession(session)
 	return nil
 }
 
 func (h *MessageHandler) OnError(session getty.Session, err error) {
-	logger.Infof("OnError session{%s} got error{%v}, will be closed.", session.Stat(), err)
+	logger.Infof("Http.OnError - session{%s} got error{%v}, will be closed.", session.Stat(), err)
 }
 
 func (h *MessageHandler) OnClose(session getty.Session) {
-	logger.Infof("OnClose session{%s} is closing......", session.Stat())
+	logger.Infof("Http.OnClose - session{%s} is closing......", session.Stat())
 
 	h.GettyClient.RemoveSession(session)
 }
@@ -56,29 +57,43 @@ func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 
 	for _, v := range s {
 		if v != nil {
+			logger.Debugf("Http.OnMessage - message package item{%#v}", v)
 			res, err := h.MsgHandle(context.Background(), v)
 			reply(session, res, err)
 		}
 	}
 }
 
-func (h *MessageHandler) OnCron(session getty.Session) {
-	active := session.GetActive()
+func (h *MessageHandler) OnCron(sess getty.Session) {
+	active := sess.GetActive()
+	actDtime := active.Format(constants.DateTimeFormat2)
+	logger.Debugf("Http.OnCron - session heartbeat check, last active: %s", actDtime)
 
 	if cronTime < time.Since(active).Nanoseconds() {
-		logger.Infof("Http.OnCorn - session{%s} timeout{%s}", session.Stat(), time.Since(active).String())
-		session.Close()
-		h.GettyClient.RemoveSession(session)
+		logger.Infof(
+			"Tcp.OnCorn - session{%s} timeout{%s}(last active:%s)",
+			sess.Stat(),
+			time.Since(active).String(),
+			actDtime,
+		)
+
+		sess.Close()
+		h.GettyClient.RemoveSession(sess)
 	}
 }
 
-func reply(session getty.Session, resBy []byte, err error) {
-	pkg := transport.NewHttpResponsePkg(http.StatusOK, resBy)
-	if err != nil || resBy == nil {
-		pkg = transport.NewHttpResponsePkg(http.StatusInternalServerError, resBy)
+func reply(sess getty.Session, resp []byte, err error) {
+	if sess.IsClosed() {
+		logger.Errorf("Tcp.OnMessage - reply error: session closed, err: %#v, resp: %s", err, string(resp))
+		return
 	}
 
-	_, _, err = session.WritePkg(pkg, writePkgTimeout)
+	pkg := transport.NewHttpResponsePkg(http.StatusOK, resp)
+	if err != nil || resp == nil {
+		pkg = transport.NewHttpResponsePkg(http.StatusInternalServerError, resp)
+	}
+
+	_, _, err = sess.WritePkg(pkg, writePkgTimeout)
 	if err != nil {
 		logger.Errorf("Http.WritePkg error: %#v, pkg: %#v", err, pkg)
 	}

@@ -76,10 +76,6 @@ func (h *MessageHandler) OnCron(sess getty.Session) {
 
 		sess.Close()
 		h.GettyClient.RemoveSession(sess)
-		// } else {
-		// 	pkg := transport.NewHttpResponsePkg(http.StatusOK, [])
-		//
-		// 	sess.WritePkg()
 	}
 
 	// session.UpdateActive()

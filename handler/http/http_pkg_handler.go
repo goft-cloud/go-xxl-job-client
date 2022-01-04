@@ -12,23 +12,24 @@ const (
 	pkgSplitStr = "POST"
 )
 
+// PkgHandlerRes struct
 type PkgHandlerRes struct {
 	LastPkg []byte
 	Valid   bool
 }
 
-// HttpPackageHandler struct
-type HttpPackageHandler struct {
+// PackageHandler struct
+type PackageHandler struct {
 	pkgHandlerRes *PkgHandlerRes
 }
 
 func NewHttpPackageHandler() getty.ReadWriter {
-	return &HttpPackageHandler{
+	return &PackageHandler{
 		pkgHandlerRes: &PkgHandlerRes{},
 	}
 }
 
-func (h *HttpPackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, error) {
+func (h *PackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, error) {
 	var res []*transport.HttpRequestPkg
 	length := len(data)
 
@@ -59,12 +60,12 @@ func (h *HttpPackageHandler) Read(ss getty.Session, data []byte) (interface{}, i
 	return res, length, nil
 }
 
-func (h *HttpPackageHandler) Write(ss getty.Session, p interface{}) ([]byte, error) {
+func (h *PackageHandler) Write(ss getty.Session, p interface{}) ([]byte, error) {
 	pkg := p.(*transport.HttpResponsePkg)
 	return pkg.Decoder(), nil
 }
 
-func (h *HttpPackageHandler) unpacks(s []byte) {
+func (h *PackageHandler) unpacks(s []byte) {
 	var buffer bytes.Buffer
 	buffer.WriteString("POST")
 	buffer.Write(s)

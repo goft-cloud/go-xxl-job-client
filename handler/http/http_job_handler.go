@@ -41,6 +41,7 @@ func (h HttpRequestHandler) Run(ctx context.Context, r interface{}) (triggerPara
 	return triggerParam, err
 }
 
+// JobId struct
 type JobId struct {
 	JobId int32 `json:"jobId"`
 }
@@ -52,6 +53,7 @@ func (h HttpRequestHandler) Kill(ctx context.Context, r interface{}) (jobId int3
 	if err != nil {
 		return 0, err
 	}
+
 	return job.JobId, err
 }
 
