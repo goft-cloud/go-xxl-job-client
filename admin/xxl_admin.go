@@ -102,8 +102,8 @@ func (s *XxlAdminServer) AutoRegisterJobGroup() {
 	}
 }
 
-// RemoveRegisterExecutor remove register executor
-func (s *XxlAdminServer) RemoveRegisterExecutor() {
+// UnregisterExecutor remove register executor
+func (s *XxlAdminServer) UnregisterExecutor() {
 	logger.Info("remove job executor from xxl-job admin")
 
 	s.requestAdminApi(s.removerRegister, s.Registry)

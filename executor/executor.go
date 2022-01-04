@@ -26,6 +26,11 @@ func (e *Executor) SetClient(gettyClient *GettyClient) {
 	e.gettyClient = gettyClient
 }
 
+// GetClient get getty client
+func (e *Executor) GetClient() *GettyClient {
+	return e.gettyClient
+}
+
 func (e *Executor) GetRegisterAddr() string {
 	if e.Protocol == "" {
 		return fmt.Sprintf("%s:%d", getIp(), e.Port)

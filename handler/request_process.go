@@ -16,11 +16,9 @@ import (
 type RequestProcess struct {
 	sync.RWMutex
 
+	JobHandler  *JobHandler
+	ReqHandler  RequestHandler
 	adminServer *admin.XxlAdminServer
-
-	JobHandler *JobHandler
-
-	ReqHandler RequestHandler
 }
 
 // NewRequestProcess create object.
@@ -170,7 +168,7 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 func (j *RequestProcess) UnregisterExecutor() {
 	j.JobHandler.clearJob()
 
-	j.adminServer.RemoveRegisterExecutor()
+	j.adminServer.UnregisterExecutor()
 }
 
 // RegisterExecutor to xxl-job admin server

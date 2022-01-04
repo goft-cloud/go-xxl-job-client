@@ -8,15 +8,19 @@ import (
 
 const (
 	defaultAdminAddr = "http://localhost:8080/xxl-job-admin/"
-	defaultAppName   = "go-executor"
+	defaultAppName   = "xxl-go-executor"
 	defaultPort      = 8081
 	defaultTimeout   = 5 * time.Second
 	defaultBeatTime  = 20 * time.Second
 )
 
+// Option func
 type Option func(*ClientOptions)
 
+// ClientOptions struct
 type ClientOptions struct {
+	// Enable client.
+	Enable bool
 	// AdminAddr xxl admin 地址
 	AdminAddr []string
 

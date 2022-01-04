@@ -75,9 +75,6 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		}
 	}
 
-	// remove executor on client server close
-	gettyClient.ServeCloserFn = requestHandler.UnregisterExecutor
-
 	executor.SetClient(gettyClient)
 
 	return &XxlClient{
@@ -86,6 +83,11 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		executor: executor,
 		options:  clientOps,
 	}
+}
+
+// WithConfigFunc with option config func
+func (c *XxlClient) WithConfigFunc(fn func(opts *option.ClientOptions)) {
+	fn(&c.options)
 }
 
 // MustRun start and run, will panic on error
@@ -102,7 +104,12 @@ func (c *XxlClient) Run() error {
 	logger.Debugf("the go executor name is: %s, enableHttp: %v", c.executor.AppName, c.options.EnableHttp)
 
 	// register to xxl-job admin
-	c.requestHandler.RegisterExecutor()
+	if c.options.Enable {
+		c.requestHandler.RegisterExecutor()
+
+		// remove executor on client server close
+		c.executor.GetClient().ServeCloserFn = c.requestHandler.UnregisterExecutor
+	}
 
 	err := logger.InitLogPath()
 	if err != nil {
@@ -110,8 +117,12 @@ func (c *XxlClient) Run() error {
 	}
 
 	logger.Infof("go executor client started on port: %d", c.options.Port)
+	if !c.options.Enable {
+		logger.Infof("NOTICE: xxl-job go executor is DISABLED(by options.Enable=false)")
+	}
 
-	c.executor.Run(c.requestHandler.JobHandler.BeanJobLength())
+	c.executor.Run(c.requestHandler.JobHandler.BeanJobLength() + 1)
+
 	return nil
 }
 
