@@ -1,5 +1,7 @@
 package option
 
+import "strings"
+
 // modeType global option
 type modeType string
 
@@ -13,11 +15,24 @@ const (
 	ModeRelease modeType = "RELEASE"
 )
 
-var runMode modeType = ModeRelease
+// default is release mode
+var runMode = ModeRelease
 
 // SetRunMode type
 func SetRunMode(mt modeType) {
 	runMode = mt
+}
+
+// SetRunModeByString type
+func SetRunModeByString(mt string) {
+	mt = strings.ToUpper(mt)
+	if mt == ModeDebug.String() {
+		SetRunMode(ModeDebug)
+	} else if mt == ModeRelease.String() {
+		SetRunMode(ModeRelease)
+	} else {
+		panic("xxl-job-go: invalid mode type value")
+	}
 }
 
 // RunMode get

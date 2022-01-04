@@ -74,12 +74,8 @@ go get github.com/goft-cloud/go-xxl-job-client/v2
 	// 	clientOpts = append(clientOpts, option.WithLogBasePath(logPath))
 	// }
 
-	// add getty logger
-	client.SetGettyLogger(&logrus.Logger{
-		Out:       os.Stdout,
-		Formatter: new(logrus.TextFormatter),
-		Level:     logrus.InfoLevel,
-	})
+    // set getty logger level
+    client.SetGettyLogLevel(getty.LoggerLevelInfo)
 
 	// 注册JobHandler(Bean模式任务的handler)
 	client.RegisterJob("my_job_handler", JobTest)

@@ -12,6 +12,7 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/option"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
+	"github.com/gookit/goutil"
 )
 
 // XxlClient struct
@@ -122,6 +123,16 @@ func (c *XxlClient) RegisterJob(jobName string, function handler.BeanJobRunFunc)
 // SetGettyLogger set logger to getty.
 func (c *XxlClient) SetGettyLogger(logger getty.Logger) {
 	getty.SetLogger(logger)
+}
+
+// GetGettyLogger get getty logger.
+func (c *XxlClient) GetGettyLogger() getty.Logger {
+	return getty.GetLogger()
+}
+
+// SetGettyLogLevel set getty logger level.
+func (c *XxlClient) SetGettyLogLevel(logLevel getty.LoggerLevel) {
+	goutil.PanicIfErr(getty.SetLoggerLevel(logLevel))
 }
 
 // Unregister from xxl-job admin.
