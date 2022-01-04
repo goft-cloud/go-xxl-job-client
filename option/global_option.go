@@ -39,7 +39,7 @@ func SetRunModeByString(mt string) {
 	} else if mt == ModeRelease.String() {
 		SetRunMode(ModeRelease)
 	} else {
-		panic("xxl-job-go: invalid mode type value")
+		panic("xxl-job-go: invalid mode type value: " + mt)
 	}
 }
 
