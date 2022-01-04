@@ -55,7 +55,7 @@ func GetLogPath(nowTime time.Time) string {
 func InitLogPath() error {
 	Infof("job logs base path dir: %s", logBasPath)
 
-	_, err := os.Stat(GetLogPath(time.Now()))
+	_, err := os.Stat(LogBasePath())
 	if err != nil && os.IsNotExist(err) {
 		err = os.MkdirAll(logBasPath, os.ModePerm)
 	}
@@ -97,13 +97,37 @@ func LogJob(ctx context.Context, args ...interface{}) {
 			buffer.WriteString("\n")
 		}
 
-		writeLog(GetLogPath(nowTime), LogfileName(cjp.LogID), buffer.String())
+		pathPrefix := GetLogPath(nowTime)
+		// writeLog(pathPrefix, LogfileName(cjp.LogID), buffer.String())
+		// up: 不创建子目录
+		writeLogV2(pathPrefix+"_"+LogfileName(cjp.LogID), buffer.String())
 	}
 }
 
 func writeLog(logPath, logFile, msg string) error {
 	if !strutil.IsBlank(logFile) {
 		file, err := OpenDirFile(logPath, logFile)
+		if err != nil {
+			return err
+		}
+
+		if file != nil {
+			defer file.Close()
+			res, err := file.Write([]byte(msg))
+			if err != nil {
+				return err
+			}
+			if res <= 0 {
+				return errors.New("write log failed")
+			}
+		}
+	}
+	return nil
+}
+
+func writeLogV2(logFile, msg string) error {
+	if !strutil.IsBlank(logFile) {
+		file, err := OpenLogFile(logFile)
 		if err != nil {
 			return err
 		}
@@ -149,8 +173,11 @@ func LogfileName(logId int64) string {
 }
 
 func ReadLog(logDateTim, logId int64, fromLineNum int32) (line int32, content string) {
-	nowtime := time.Unix(logDateTim/1000, 0)
-	fileName := GetLogPath(nowtime) + "/" + fmt.Sprintf("%d", logId) + ".log"
+	nowTime := time.Unix(logDateTim/1000, 0)
+	pathPrefix := GetLogPath(nowTime)
+
+	// fileName := GetLogPath(nowTime) + "/" + fmt.Sprintf("%d", logId) + ".log"
+	fileName := pathPrefix + "_" + fmt.Sprintf("%d", logId) + ".log"
 	file, err := os.Open(fileName)
 	totalLines := int32(1)
 

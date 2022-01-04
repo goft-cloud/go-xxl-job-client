@@ -57,8 +57,8 @@ func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 
 	for _, v := range s {
 		if v != nil {
-			logger.Debugf("Http.OnMessage - message package item{%#v}", v)
 			res, err := h.MsgHandle(context.Background(), v)
+			logger.Debugf("Http.OnMessage - reply message package data: %s", string(res))
 			reply(session, res, err)
 		}
 	}

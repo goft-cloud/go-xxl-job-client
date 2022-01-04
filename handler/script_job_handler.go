@@ -109,15 +109,17 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	ctx := context.WithValue(context.Background(), constants.CtxParamKey, cjp)
 
 	// ensure log dir created.
+	// up: 不创建子目录
 	logDir := logger.GetLogPath(time.Now())
-	if _, err := os.Stat(logDir); os.IsNotExist(err) {
-		s.Lock()
-		os.MkdirAll(logDir, os.ModePerm)
-		s.Unlock()
-	}
+	// if _, err := os.Stat(logDir); os.IsNotExist(err) {
+	// 	s.Lock()
+	// 	os.MkdirAll(logDir, os.ModePerm)
+	// 	s.Unlock()
+	// }
 
 	binName := scriptCmd[glueType]
-	logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
+	// logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
+	logfile := logDir + "_" + logger.LogfileName(runParam.LogId)
 
 	cancelCtx, canFun := context.WithCancel(context.Background())
 	defer canFun()

@@ -302,12 +302,16 @@ func (j *JobHandler) cancelJob(jobId int32) {
 
 					logger.LogJobf(ctx, "job#%d task#%d canceled by admin!", jobId, logId)
 				}()
+			} else {
+				logger.Errorf("cancel job#%d error, current running task not found", jobId)
 			}
 
 			if jobQueue.Queue != nil {
 				jobQueue.Queue.Clear()
 			}
 		}
+	} else {
+		logger.Errorf("cancel job#%d error, job not found", jobId)
 	}
 }
 
