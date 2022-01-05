@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os/exec"
 
-	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/handler"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/gookit/goutil/arrutil"
@@ -66,12 +65,12 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, cmdName, args...)
 
 	// add shard ENV
-	if obj.ShardTotal > 0 {
-		cmd.Env = []string{
-			constants.EnvXxlShardIdx + "=" + strutil.MustString(obj.ShardIndex),
-			constants.EnvXxlShardTotal + "=" + strutil.MustString(obj.ShardTotal),
-		}
-	}
+	// if obj.ShardTotal > 0 {
+	// 	cmd.Env = []string{
+	// 		constants.EnvXxlShardIdx + "=" + strutil.MustString(obj.ShardIndex),
+	// 		constants.EnvXxlShardTotal + "=" + strutil.MustString(obj.ShardTotal),
+	// 	}
+	// }
 
 	logfile := logger.LogfilePath(logId)
 	fh, err := logger.OpenLogFile(logfile)

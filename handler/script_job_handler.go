@@ -13,7 +13,6 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 	"github.com/gookit/goutil/dump"
-	"github.com/gookit/goutil/strutil"
 )
 
 var scriptMap = map[string]string{
@@ -126,12 +125,13 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	cmd := exec.CommandContext(cancelCtx, binName, args...)
 
 	// add shard ENV
-	if runParam.ShardTotal > 0 {
-		cmd.Env = []string{
-			constants.EnvXxlShardIdx + "=" + strutil.MustString(runParam.ShardIdx),
-			constants.EnvXxlShardTotal + "=" + strutil.MustString(runParam.ShardTotal),
-		}
-	}
+	// if runParam.ShardTotal > 0 {
+	//  TIP: if set env, will not load default env data.
+	// 	cmd.Env = []string{
+	// 		constants.EnvXxlShardIdx + "=" + strutil.MustString(runParam.ShardIdx),
+	// 		constants.EnvXxlShardTotal + "=" + strutil.MustString(runParam.ShardTotal),
+	// 	}
+	// }
 
 	fh, err := logger.OpenLogFile(logfile)
 	if err != nil {
