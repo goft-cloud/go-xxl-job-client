@@ -143,6 +143,7 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	args := runParam.BuildCmdArgs()
 	cmd = exec.CommandContext(cancelCtx, binName, args...)
 	stdout, _ := cmd.StdoutPipe()
+	logger.LogJobf(ctx, "job#%d - task#%d command script start run!", jobId, logId)
 
 	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
 	fh, err := logger.OpenLogFile(logfile)
@@ -178,5 +179,6 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 	err = fh.Close() // close log file.
 	logger.Debugf("job#%d - run task#%d command script success", jobId, logId)
+	logger.LogJobf(ctx, "bean job#%d - task#%d command script run success!", jobId, logId)
 	return err
 }
