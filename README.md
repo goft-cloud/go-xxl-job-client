@@ -11,6 +11,7 @@ xxl-job go 客户端版
 - 添加客户端关闭处理：自动从xxl-job admin取消注册
 - 修复支持php，python 等其他脚本的执行
 - jobHandler 回调 `ctx` 中的 `jobParam` 由 `map` 改为结构体 `param.CtxJobParam`
+- 内置实现了一个 cmd handler, 可以用于直接执行命令 `client.RegisterJob("cmd_handler", beanjob.NewCmdHandler())`
 - 用户输入参数
   - 参数分割由 `,` 调整为换行符 `\n`
   - 参数存储到新的字段 `CtxJobParam.InputParams`

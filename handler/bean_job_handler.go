@@ -112,6 +112,7 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 		return err
 	}
 
-	logger.Debugf("bean job#%d - run task#%d command script success", jobId, logId)
+	logger.Debugf("bean job#%d - run task#%d handle success", jobId, logId)
+	logger.LogJobf(ctx, "bean job#%d - task#%d run success!", jobId, logId)
 	return nil
 }

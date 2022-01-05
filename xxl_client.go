@@ -133,6 +133,7 @@ func (c *XxlClient) Run() error {
 
 // RegisterJob add job handler.
 func (c *XxlClient) RegisterJob(jobName string, function handler.BeanJobRunFunc) {
+	logger.Debugf("register bean job handler: %s", jobName)
 	c.requestHandler.RegisterJob(jobName, function)
 }
 

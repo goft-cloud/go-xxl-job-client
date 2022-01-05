@@ -47,8 +47,40 @@ func SetLogBasePath(path string) {
 
 // GetLogPath dir path.
 func GetLogPath(nowTime time.Time) string {
-	// split by YMD dir.
 	return logBasPath + "/" + nowTime.Format(constants.DateFormat)
+}
+
+// OpenDirFile open file in the dir
+func OpenDirFile(logDir, fileName string) (*os.File, error) {
+	logfilePath := logDir + "/" + fileName
+
+	// ensure log dir is created
+	_, err := os.Stat(logDir)
+	if err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(logBasPath, os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return OpenLogFile(logfilePath)
+}
+
+// OpenLogFile handler
+func OpenLogFile(logfile string) (*os.File, error) {
+	return os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+}
+
+// LogfilePath get log file path.
+func LogfilePath(logId int64) string {
+	nowTime := time.Now()
+
+	return logBasPath + "/" + nowTime.Format(constants.DateFormat) + "_" + LogfileName(logId)
+}
+
+// LogfileName build
+func LogfileName(logId int64) string {
+	return fmt.Sprintf("%d", logId) + ".log"
 }
 
 // InitLogPath dir
@@ -144,32 +176,6 @@ func writeLogV2(logFile, msg string) error {
 		}
 	}
 	return nil
-}
-
-// OpenDirFile open file in the dir
-func OpenDirFile(logDir, fileName string) (*os.File, error) {
-	fileFullPath := logDir + "/" + fileName
-
-	// ensure log dir is created
-	_, err := os.Stat(logDir)
-	if err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(logBasPath, os.ModePerm)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return OpenLogFile(fileFullPath)
-}
-
-// OpenLogFile handler
-func OpenLogFile(logfile string) (*os.File, error) {
-	return os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-}
-
-// LogfileName build
-func LogfileName(logId int64) string {
-	return fmt.Sprintf("%d", logId) + ".log"
 }
 
 func ReadLog(logDateTim, logId int64, fromLineNum int32) (line int32, content string) {

@@ -17,6 +17,20 @@ import (
 	"github.com/gookit/goutil/strutil"
 )
 
+// GetCtxJobParam object
+func GetCtxJobParam(ctx context.Context) (*param.CtxJobParam, error) {
+	val := ctx.Value(constants.CtxParamKey)
+	if val == nil {
+		return nil, errors.New("ctx job param not exists")
+	}
+
+	if cjp, ok := val.(*param.CtxJobParam); ok {
+		return cjp, nil
+	}
+
+	return nil, errors.New("ctx job param is invalid")
+}
+
 // NewCtxJobParamByTpp create
 func NewCtxJobParamByTpp(ttp *transport.TriggerParam) *param.CtxJobParam {
 	return &param.CtxJobParam{
