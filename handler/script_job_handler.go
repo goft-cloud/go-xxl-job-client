@@ -13,6 +13,7 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
+	"github.com/gookit/goutil/dump"
 	"github.com/gookit/goutil/strutil"
 )
 
@@ -109,53 +110,27 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	cjp := NewCtxJobParamByJrp(jobId, runParam)
 
 	// dump.P(cjp)
-	logger.Debugf("exec script job#%d task#%d, type: %s, params: %v", jobId, logId, glueType, cjp.String())
+	logger.Debugf("job#%d - exec script task#%d, type: %s, params: %v", jobId, logId, glueType, cjp.String())
 	ctx := context.WithValue(context.Background(), constants.CtxParamKey, cjp)
 
-	// ensure log dir created.
-	// up: 不创建子目录
-	// logDir := logger.GetLogPath(time.Now())
-	// if _, err := os.Stat(logDir); os.IsNotExist(err) {
-	// 	s.Lock()
-	// 	os.MkdirAll(logDir, os.ModePerm)
-	// 	s.Unlock()
-	// }
-
 	binName := scriptBin[glueType]
-	// logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
-	// logfile := logDir + "_" + logger.LogfileName(runParam.LogId)
 	logfile := logger.LogfilePath(logId)
+	// logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
 
 	cancelCtx, canFun := context.WithCancel(context.Background())
 	defer canFun()
 	runParam.CurrentCancelFunc = canFun
 
-	var cmd *exec.Cmd
+	logger.LogJobf(ctx, "task#%d %s script start run!", logId, binName)
 
-	// if binName == ShellBash {
-	// NOTICE: '-c' only for shell script
-	// - use command pipe '>>logfile' sync log to file.
-	// code := runParam.BuildCmdArgsString(logfile)
-	// cmd = exec.CommandContext(cancelCtx, binName, "-c", code)
-	// } else {
-	// TIP: use args the pipe mark >> no effect.
-	// cmdArgs := runParam.BuildCmdArgs(logfile)
 	args := runParam.BuildCmdArgs()
-	cmd = exec.CommandContext(cancelCtx, binName, args...)
-	stdout, _ := cmd.StdoutPipe()
-	logger.LogJobf(ctx, "job#%d - task#%d command script start run!", jobId, logId)
-
-	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
-	fh, err := logger.OpenLogFile(logfile)
+	cmd := exec.CommandContext(cancelCtx, binName, args...)
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
 
-	// defer fh.Close()
-	// go io.Copy(io.MultiWriter(f, os.Stdout), stdout)
-	go io.Copy(fh, stdout)
-	// }
-
+	// add shard ENV
 	if runParam.ShardTotal > 0 {
 		cmd.Env = []string{
 			constants.EnvXxlShardIdx + "=" + strutil.MustString(runParam.ShardIdx),
@@ -163,7 +138,15 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		}
 	}
 
-	logger.Debugf("job#%d will run task#%d script command: '%s', logfile: %s", jobId, logId, cmd.String(), logfile)
+	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
+	fh, err := logger.OpenLogFile(logfile)
+	if err != nil {
+		return err
+	}
+
+	go io.Copy(fh, stdout)
+
+	logger.Debugf("job#%d - will run task#%d script: '%s', logfile: %s", jobId, logId, cmd.String(), logfile)
 	if err := cmd.Run(); err != nil {
 		_ = fh.Close() // close log file.
 
@@ -173,12 +156,13 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 			logger.Errorf("job#%d - run task#%d script command error: %s", jobId, logId, errMsg)
 		}
 
-		logger.LogJobf(ctx, "job#%d - run task#%d script failed, error: %s", jobId, logId, errMsg)
+		dump.P(err)
+		logger.LogJobf(ctx, "run task#%d script failed, error: %s", jobId, logId, errMsg)
 		return err
 	}
 
 	err = fh.Close() // close log file.
-	logger.Debugf("job#%d - run task#%d command script success", jobId, logId)
-	logger.LogJobf(ctx, "bean job#%d - task#%d command script run success!", jobId, logId)
+	logger.Debugf("job#%d - run task#%d script success", jobId, logId)
+	logger.LogJobf(ctx, "bean task#%d script run success!", jobId, logId)
 	return err
 }

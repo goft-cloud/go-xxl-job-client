@@ -6,10 +6,12 @@ import (
 	"io"
 	"os/exec"
 
+	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/handler"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/gookit/goutil/arrutil"
 	"github.com/gookit/goutil/cliutil/cmdline"
+	"github.com/gookit/goutil/dump"
 	"github.com/gookit/goutil/strutil"
 )
 
@@ -23,6 +25,7 @@ func NewCmdHandler(allowCmds []string) handler.BeanJobRunFunc {
 	ch := &RunCmdHandler{
 		allowCmds: allowCmds,
 	}
+
 	return ch.Handle
 }
 
@@ -51,16 +54,29 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 
 	// with cmd args.
 	var args []string
-	if argsLine := obj.Param("args"); len(argsLine) > 0 {
+	argsLine := obj.Param("args")
+	if len(argsLine) > 0 {
 		args = cmdline.ParseLine(argsLine)
 	}
 
 	jobId := obj.JobID
 	logId := obj.LogID
+	logger.LogJobf(ctx, "task#%d start run the cmdline: %s %s", logId, cmdName, argsLine)
 
 	// build command
 	cmd := exec.CommandContext(ctx, cmdName, args...)
-	stdout, _ := cmd.StdoutPipe()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	// add shard ENV
+	if obj.ShardTotal > 0 {
+		cmd.Env = []string{
+			constants.EnvXxlShardIdx + "=" + strutil.MustString(obj.ShardIndex),
+			constants.EnvXxlShardTotal + "=" + strutil.MustString(obj.ShardTotal),
+		}
+	}
 
 	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
 	logfile := logger.LogfilePath(logId)
@@ -71,11 +87,11 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 
 	go io.Copy(fh, stdout)
 
-	logger.LogJobf(ctx, "will run the cmdline: %s", cmd.String())
 	logger.Debugf("cmd job#%d will run task#%d cmdline: '%s', logfile: %s", jobId, logId, cmd.String(), logfile)
 	if err := cmd.Run(); err != nil {
 		_ = fh.Close() // close log file.
 
+		dump.P(err)
 		errMsg := err.Error()
 		if ee, ok := err.(*exec.ExitError); ok {
 			errMsg = ee.String() + "; " + string(ee.Stderr)
