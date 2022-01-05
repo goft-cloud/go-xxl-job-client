@@ -180,6 +180,27 @@ type CtxJobParam struct {
 
 在调度日志中点击执行日志查看任务执行日志。
 
+## CmdHandler
+
+注册job handler:
+
+```go
+	client.RegisterJob("cmd_handler", beanjob.NewCmdHandler(nil))
+```
+
+限制可执行的命令：
+
+```go
+	client.RegisterJob("cmd_handler", beanjob.NewCmdHandler([]string{"php", "some-cmd"}))
+```
+
+`xxl-job admin` 运行示例：
+
+```text
+cmd = php
+args = -v
+```
+
 ## F&Q
 
 > (1) 遇到错误：register executor failed, please check xxl admin address or accessToken

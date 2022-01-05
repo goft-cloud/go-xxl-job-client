@@ -118,10 +118,10 @@ func LogJob(ctx context.Context, args ...interface{}) {
 
 		buffer.WriteString("#")
 		buffer.WriteString(cjp.JobFunc)
-		buffer.WriteString("]-[")
+		buffer.WriteString("]-[job:")
 
 		buffer.WriteString(strutil.MustString(cjp.JobID))
-		buffer.WriteString("]  ")
+		buffer.WriteString("] ")
 
 		if len(args) > 0 {
 			buffer.WriteString(fmt.Sprintln(args...))

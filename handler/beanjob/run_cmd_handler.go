@@ -8,17 +8,21 @@ import (
 
 	"github.com/goft-cloud/go-xxl-job-client/v2/handler"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
+	"github.com/gookit/goutil/arrutil"
 	"github.com/gookit/goutil/cliutil/cmdline"
 	"github.com/gookit/goutil/strutil"
 )
 
 // RunCmdHandler struct
 type RunCmdHandler struct {
+	allowCmds []string
 }
 
 // NewCmdHandler bean handler
-func NewCmdHandler() handler.BeanJobRunFunc {
-	ch := &RunCmdHandler{}
+func NewCmdHandler(allowCmds []string) handler.BeanJobRunFunc {
+	ch := &RunCmdHandler{
+		allowCmds: allowCmds,
+	}
 	return ch.Handle
 }
 
@@ -35,6 +39,12 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 	}
 
 	if cmdName == "help" {
+		logger.LogJob(ctx, ch.BuildHelp())
+		return nil
+	}
+
+	// allow limit cmd
+	if len(ch.allowCmds) > 0 && arrutil.StringsHas(ch.allowCmds, cmdName) {
 		logger.LogJob(ctx, ch.BuildHelp())
 		return nil
 	}
@@ -61,6 +71,7 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 
 	go io.Copy(fh, stdout)
 
+	logger.LogJobf(ctx, "will run the cmdline: %s", cmd.String())
 	logger.Debugf("cmd job#%d will run task#%d cmdline: '%s', logfile: %s", jobId, logId, cmd.String(), logfile)
 	if err := cmd.Run(); err != nil {
 		_ = fh.Close() // close log file.

@@ -105,6 +105,9 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 
 	// with job params
 	ctx := context.WithValue(valueCtx, constants.CtxParamKey, cjp)
+	logger.LogJobf(ctx, "bean job#%d - task#%d start run!", jobId, logId)
+
+	// do run
 	err := b.RunFunc(ctx)
 	if err != nil {
 		logger.Errorf("bean job#%d - task#%d execute failed. error: %s", jobId, logId, err.Error())
