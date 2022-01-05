@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -125,10 +124,6 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 	args := runParam.BuildCmdArgs()
 	cmd := exec.CommandContext(cancelCtx, binName, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
 
 	// add shard ENV
 	if runParam.ShardTotal > 0 {
@@ -138,13 +133,21 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		}
 	}
 
-	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
 	fh, err := logger.OpenLogFile(logfile)
 	if err != nil {
 		return err
 	}
 
-	go io.Copy(fh, stdout)
+	// use file receive output
+	cmd.Stderr = fh
+	cmd.Stdout = fh
+
+	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
+	// stdout, err := cmd.StdoutPipe()
+	// if err != nil {
+	// 	return err
+	// }
+	// go io.Copy(fh, stdout)
 
 	logger.Debugf("job#%d - will run task#%d script: '%s', logfile: %s", jobId, logId, cmd.String(), logfile)
 	if err := cmd.Run(); err != nil {

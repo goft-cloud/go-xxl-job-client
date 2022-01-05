@@ -3,7 +3,6 @@ package beanjob
 import (
 	"context"
 	"errors"
-	"io"
 	"os/exec"
 
 	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
@@ -65,10 +64,6 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 
 	// build command
 	cmd := exec.CommandContext(ctx, cmdName, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
 
 	// add shard ENV
 	if obj.ShardTotal > 0 {
@@ -78,14 +73,22 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 		}
 	}
 
-	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
 	logfile := logger.LogfilePath(logId)
 	fh, err := logger.OpenLogFile(logfile)
 	if err != nil {
 		return err
 	}
 
-	go io.Copy(fh, stdout)
+	// use file receive output
+	cmd.Stderr = fh
+	cmd.Stdout = fh
+
+	// see: https://stackoverflow.com/questions/48926982/write-stdout-stream-to-file
+	// stdout, err := cmd.StdoutPipe()
+	// if err != nil {
+	// 	return err
+	// }
+	// go io.Copy(fh, stdout)
 
 	logger.Debugf("cmd job#%d will run task#%d cmdline: '%s', logfile: %s", jobId, logId, cmd.String(), logfile)
 	if err := cmd.Run(); err != nil {
