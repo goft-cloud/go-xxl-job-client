@@ -13,7 +13,7 @@ func TestXxlClient(t *testing.T) {
 	// TIP: 可以在开发时打开调试模式，可以看到更多信息
 	option.SetRunMode(option.ModeDebug)
 
-	var clientOpts = []option.Option{
+	var clientOpts = []option.OptionFunc{
 		// option.WithAccessToken("edqedewfrqdrfrfr"),
 		option.WithEnableHttp(true), // xxl_job v2.2之后的版本
 		option.WithClientPort(8083), // 客户端启动端口

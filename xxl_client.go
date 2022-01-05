@@ -24,13 +24,13 @@ type XxlClient struct {
 }
 
 // NewXxlClient create
-func NewXxlClient(opts ...option.Option) *XxlClient {
+func NewXxlClient(opts ...option.OptionFunc) *XxlClient {
 	clientOps := option.NewClientOptions(opts...)
 
 	executor := executor2.NewExecutor(
 		"",
 		clientOps.AppName,
-		clientOps.Port,
+		clientOps.ClientPort,
 	)
 
 	adminServer := admin.NewAdminServer(
@@ -116,7 +116,7 @@ func (c *XxlClient) Run() error {
 		return err
 	}
 
-	logger.Infof("go executor client started on port: %d", c.options.Port)
+	logger.Infof("go executor client started on port: %d", c.options.ClientPort)
 	if !c.options.Enable {
 		logger.Infof("NOTICE: xxl-job go executor is DISABLED(by options.Enable=false)")
 	}

@@ -17,6 +17,11 @@ import (
 	"github.com/gookit/goutil/strutil"
 )
 
+const (
+	ShellSh   = "sh"
+	ShellBash = "bash"
+)
+
 var scriptMap = map[string]string{
 	"GLUE_SHELL":      ".sh",
 	"GLUE_PYTHON":     ".py",
@@ -25,8 +30,8 @@ var scriptMap = map[string]string{
 	"GLUE_POWERSHELL": ".ps1",
 }
 
-var scriptCmd = map[string]string{
-	"GLUE_SHELL":      "bash",
+var scriptBin = map[string]string{
+	"GLUE_SHELL":      ShellBash,
 	"GLUE_PYTHON":     "python",
 	"GLUE_PHP":        "php",
 	"GLUE_NODEJS":     "node",
@@ -117,7 +122,7 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	// 	s.Unlock()
 	// }
 
-	binName := scriptCmd[glueType]
+	binName := scriptBin[glueType]
 	// logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
 	logfile := logDir + "_" + logger.LogfileName(runParam.LogId)
 
@@ -127,11 +132,11 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 	var cmd *exec.Cmd
 
-	// if binName == "bash" {
+	// if binName == ShellBash {
 	// NOTICE: '-c' only for shell script
 	// - use command pipe '>>logfile' sync log to file.
 	// code := runParam.BuildCmdArgsString(logfile)
-	// cmd = exec.CommandContext(cancelCtx, "bash", "-c", code)
+	// cmd = exec.CommandContext(cancelCtx, binName, "-c", code)
 	// } else {
 	// TIP: use args the pipe mark >> no effect.
 	// cmdArgs := runParam.BuildCmdArgs(logfile)
