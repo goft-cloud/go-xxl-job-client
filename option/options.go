@@ -60,8 +60,8 @@ func NewClientOptions(opts ...OptionFunc) ClientOptions {
 	return options
 }
 
-// WithOptionFunc with custom option func
-func WithOptionFunc(fn func(opts *ClientOptions)) OptionFunc {
+// WithOptionsFunc with custom option func
+func WithOptionsFunc(fn func(opts *ClientOptions)) OptionFunc {
 	return fn
 }
 

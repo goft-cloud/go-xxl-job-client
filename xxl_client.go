@@ -111,6 +111,11 @@ func (c *XxlClient) Run() error {
 		c.executor.GetClient().ServeCloserFn = c.requestHandler.UnregisterExecutor
 	}
 
+	// custom set shell bin
+	if c.options.ShellBin != "" {
+		handler.SetShellBin(c.options.ShellBin)
+	}
+
 	err := logger.InitLogPath()
 	if err != nil {
 		return err

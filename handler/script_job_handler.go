@@ -17,11 +17,6 @@ import (
 	"github.com/gookit/goutil/strutil"
 )
 
-const (
-	ShellSh   = "sh"
-	ShellBash = "bash"
-)
-
 var scriptMap = map[string]string{
 	"GLUE_SHELL":      ".sh",
 	"GLUE_PYTHON":     ".py",
@@ -31,11 +26,16 @@ var scriptMap = map[string]string{
 }
 
 var scriptBin = map[string]string{
-	"GLUE_SHELL":      ShellBash,
+	"GLUE_SHELL":      constants.ShellBash,
 	"GLUE_PYTHON":     "python",
 	"GLUE_PHP":        "php",
 	"GLUE_NODEJS":     "node",
 	"GLUE_POWERSHELL": "powershell",
+}
+
+// SetShellBin custom set shell bin
+func SetShellBin(binName string) {
+	scriptBin["GLUE_SHELL"] = binName
 }
 
 // ScriptHandler struct
