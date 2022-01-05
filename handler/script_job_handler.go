@@ -12,7 +12,6 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/constants"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
-	"github.com/gookit/goutil/dump"
 )
 
 var scriptMap = map[string]string{
@@ -113,7 +112,6 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 	binName := scriptBin[glueType]
 	logfile := logger.LogfilePath(logId)
-	// logfile := logDir + "/" + logger.LogfileName(runParam.LogId)
 
 	cancelCtx, canFun := context.WithCancel(context.Background())
 	defer canFun()
@@ -156,16 +154,15 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 		errMsg := err.Error()
 		if ee, ok := err.(*exec.ExitError); ok {
 			errMsg = ee.String() + "; " + string(ee.Stderr)
-			logger.Errorf("job#%d - run task#%d script command error: %s", jobId, logId, errMsg)
 		}
 
-		dump.P(err)
-		logger.LogJobf(ctx, "run task#%d script failed, error: %s", jobId, logId, errMsg)
+		logger.Errorf("job#%d - run task#%d script command error: %s", jobId, logId, errMsg)
+		logger.LogJobf(ctx, "run task#%d script failed, error: %s", logId, errMsg)
 		return err
 	}
 
 	err = fh.Close() // close log file.
 	logger.Debugf("job#%d - run task#%d script success", jobId, logId)
-	logger.LogJobf(ctx, "bean task#%d script run success!", jobId, logId)
+	logger.LogJobf(ctx, "task#%d script run success!", logId)
 	return err
 }

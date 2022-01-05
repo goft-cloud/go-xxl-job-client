@@ -95,7 +95,7 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 			}
 
 			ctx := context.WithValue(baseCtx, constants.CtxParamKey, cjp)
-			logger.LogJobf(ctx, "bean job#%d - task#%d run fatal! error: %s", jobId, logId, errMsg)
+			logger.LogJobf(ctx, "bean job task#%d run fatal! error: %s", logId, errMsg)
 		}
 	}()
 
@@ -105,17 +105,17 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 
 	// with job params
 	ctx := context.WithValue(valueCtx, constants.CtxParamKey, cjp)
-	logger.LogJobf(ctx, "bean job#%d - task#%d start run!", jobId, logId)
+	logger.LogJobf(ctx, "bean job task#%d start run!", logId)
 
 	// do run
 	err := b.RunFunc(ctx)
 	if err != nil {
 		logger.Errorf("bean job#%d - task#%d execute failed. error: %s", jobId, logId, err.Error())
-		logger.LogJobf(ctx, "bean job#%d - task#%d run failed! error: %s", jobId, logId, err.Error())
+		logger.LogJobf(ctx, "bean job task#%d run failed! error: %s", logId, err.Error())
 		return err
 	}
 
 	logger.Debugf("bean job#%d - run task#%d handle success", jobId, logId)
-	logger.LogJobf(ctx, "bean job#%d - task#%d run success!", jobId, logId)
+	logger.LogJobf(ctx, "bean job task#%d run success!", logId)
 	return nil
 }
