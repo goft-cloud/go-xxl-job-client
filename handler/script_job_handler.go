@@ -169,7 +169,7 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 		errMsg := err.Error()
 		if ee, ok := err.(*exec.ExitError); ok {
-			errMsg = string(ee.Stderr) + "; " + ee.String()
+			errMsg = ee.String() + "; " + string(ee.Stderr)
 			logger.Errorf("job#%d - run task#%d script command error: %s", jobId, logId, errMsg)
 		}
 

@@ -78,7 +78,7 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 
 		errMsg := err.Error()
 		if ee, ok := err.(*exec.ExitError); ok {
-			errMsg = string(ee.Stderr) + "; " + ee.String()
+			errMsg = ee.String() + "; " + string(ee.Stderr)
 			logger.Errorf("cmd job#%d - run task#%d cmdline error: %s", jobId, logId, errMsg)
 		}
 
