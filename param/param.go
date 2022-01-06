@@ -4,10 +4,11 @@ import "fmt"
 
 // CtxJobParam struct
 type CtxJobParam struct {
-	JobID   int32
-	LogID   int64
+	JobID int32
+	LogID int64
+	// JobName job handler name.
 	JobName string
-	// JobFunc on script mode, is script filepath.
+	// JobFunc on script mode, is script file path.
 	JobFunc string
 	// ShardIndex sharding info params
 	ShardIndex int32
