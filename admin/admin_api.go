@@ -10,6 +10,7 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
+// ApiCallback 执行器执行完任务后，回调任务结果时使用
 func ApiCallback(address string, accessToken map[string]string, callbackParam []*transport.HandleCallbackParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
 	bytesData, err := json.Marshal(callbackParam)
 	if err != nil {
@@ -27,15 +28,16 @@ func ApiCallback(address string, accessToken map[string]string, callbackParam []
 			// request.Header.Set("XXL-RPC-ACCESS-TOKEN", accessToken)
 		}
 	}
+
 	client := http.Client{
 		Timeout: timeout,
 	}
 	resp, err := client.Do(request)
 	if err != nil {
 		return respMap, err
-	} else {
-		defer resp.Body.Close()
 	}
+
+	defer resp.Body.Close()
 	respMap, err = parseResponse(resp)
 	if err != nil {
 		return nil, err
@@ -44,6 +46,7 @@ func ApiCallback(address string, accessToken map[string]string, callbackParam []
 	return respMap, nil
 }
 
+// RegisterJobExecutor 执行器注册时使用，调度中心会实时感知注册成功的执行器并发起任务调度
 func RegisterJobExecutor(address string, accessToken map[string]string, param *transport.RegistryParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
 	bytesData, err := json.Marshal(param)
 	if err != nil {

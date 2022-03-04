@@ -159,16 +159,16 @@ type JobQueue struct {
 	Callback   func(trigger *JobRunParam, runErr error)
 }
 
+// StopJob check
+func (jq *JobQueue) StopJob() bool {
+	return atomic.CompareAndSwapInt32(&jq.Run, 1, 0)
+}
+
 // StartJob run
 func (jq *JobQueue) StartJob() {
 	if atomic.CompareAndSwapInt32(&jq.Run, 0, 1) {
 		jq.asyRunJob()
 	}
-}
-
-// StopJob check
-func (jq *JobQueue) StopJob() bool {
-	return atomic.CompareAndSwapInt32(&jq.Run, 1, 0)
 }
 
 func (jq *JobQueue) asyRunJob() {

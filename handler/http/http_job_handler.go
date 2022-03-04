@@ -58,6 +58,7 @@ func (h HttpRequestHandler) Kill(ctx context.Context, r interface{}) (jobId int3
 	return job.JobId, err
 }
 
+// Log fetch
 func (h HttpRequestHandler) Log(ctx context.Context, r interface{}) (log *logger.LogResult, err error) {
 	req := r.(*transport.HttpRequestPkg)
 	lq := &transport.LogRequest{}

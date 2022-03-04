@@ -109,7 +109,7 @@ func (s *XxlAdminServer) UnregisterExecutor() {
 	s.requestAdminApi(s.removerRegister, s.Registry)
 }
 
-// CallbackAdmin call
+// CallbackAdmin 执行器执行完任务后，回调任务结果时使用
 func (s *XxlAdminServer) CallbackAdmin(callbackParam []*transport.HandleCallbackParam) {
 	res := s.requestAdminApi(s.apiCallback, callbackParam)
 	if !res {

@@ -42,12 +42,14 @@ func (j *RequestProcess) RegisterJob(jobName string, beanJobFn BeanJobRunFunc) {
 	j.JobHandler.RegisterJob(jobName, beanJobFn)
 }
 
+// push job to queue and run it
 func (j *RequestProcess) pushJob(trigger *transport.TriggerParam) {
 	returns := transport.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
 	}
 
+	// push job to queue and run it.
 	err := j.JobHandler.PutJobToQueue(trigger)
 	if err != nil {
 		returns.Code = http.StatusInternalServerError
