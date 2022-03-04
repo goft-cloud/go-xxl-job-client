@@ -46,6 +46,7 @@ type JobId struct {
 	JobId int32 `json:"jobId"`
 }
 
+// Kill get kill job id
 func (h HttpRequestHandler) Kill(ctx context.Context, r interface{}) (jobId int32, err error) {
 	req := r.(*transport.HttpRequestPkg)
 	job := &JobId{}

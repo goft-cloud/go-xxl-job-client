@@ -81,6 +81,7 @@ func (r *RequestProcess) jobRunCallback(trigger *JobRunParam, runErr error) {
 	r.adminServer.CallbackAdmin([]*transport.HandleCallbackParam{callback})
 }
 
+// RequestProcess handle
 func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res []byte, err error) {
 	response := transport.XxlRpcResponse{}
 	returns := transport.ReturnT{

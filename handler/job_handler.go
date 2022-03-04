@@ -298,6 +298,7 @@ func (j *JobHandler) cancelJob(jobId int32) {
 	if has {
 		logger.Infof("the job#%d be xxl-job admin canceled", jobId)
 		res := jobQueue.StopJob()
+
 		if res {
 			if jobQueue.CurrentJob != nil && jobQueue.CurrentJob.CurrentCancelFunc != nil {
 				jobQueue.CurrentJob.CurrentCancelFunc()

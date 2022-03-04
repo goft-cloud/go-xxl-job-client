@@ -45,7 +45,8 @@ func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jrp *JobRunPara
 		params := strings.Split(trigger.ExecutorParams, "\n")
 		if len(params) > 0 {
 			for _, param := range params {
-				if param != "" {
+				// if start with #, as comments
+				if param != "" && param[0] != '#' {
 					// jobP := strings.SplitN(param, "=", 2)
 					jobP := strutil.SplitNTrimmed(param, "=", 2)
 					if len(jobP) > 1 {
