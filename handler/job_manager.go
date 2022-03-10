@@ -78,7 +78,17 @@ type JobRunParam struct {
 
 // NewJobRunParam create
 func NewJobRunParam(ttp *transport.TriggerParam) *JobRunParam {
-	return &JobRunParam{}
+	return &JobRunParam{
+		LogId:       ttp.LogId,
+		LogDateTime: ttp.LogDateTime,
+		JobName:     ttp.ExecutorHandler,
+	}
+}
+
+// WithOptionFn for config param
+func (jrp *JobRunParam) WithOptionFn(fn func(jrp *JobRunParam)) *JobRunParam {
+	fn(jrp)
+	return jrp
 }
 
 // BuildCmdArgs list
@@ -156,7 +166,8 @@ type JobQueue struct {
 	GlueType   string
 	CurrentJob *JobRunParam
 	Queue      *queue.Queue
-	Callback   func(trigger *JobRunParam, runErr error)
+	// Callback on job exec completed.
+	Callback func(trigger *JobRunParam, runErr error)
 }
 
 // StopJob check
@@ -186,18 +197,19 @@ func (jq *JobQueue) asyRunJob() {
 	}()
 }
 
-// JobHandler struct
-type JobHandler struct {
+// JobManager struct
+type JobManager struct {
 	sync.RWMutex
 
+	// key is jobName by registered.
 	jobMap   map[string]BeanJobRunFunc
 	QueueMap map[int32]*JobQueue
-
+	// CallbackFunc call on job task completed, notify xxl-job admin
 	CallbackFunc func(trigger *JobRunParam, runErr error)
 }
 
 // BeanJobLength size
-func (j *JobHandler) BeanJobLength() int {
+func (j *JobManager) BeanJobLength() int {
 	if j.jobMap == nil {
 		return 0
 	}
@@ -205,21 +217,21 @@ func (j *JobHandler) BeanJobLength() int {
 }
 
 // RegisterJob handler
-func (j *JobHandler) RegisterJob(jobName string, beanJobFn BeanJobRunFunc) {
+func (j *JobManager) RegisterJob(jobName string, beanJobFn BeanJobRunFunc) {
 	j.Lock()
 	defer j.Unlock()
+
 	if j.jobMap == nil {
 		j.jobMap = make(map[string]BeanJobRunFunc)
-	} else {
-		_, ok := j.jobMap[jobName]
-		if ok {
-			panic("the job had already register, job name can't be repeated:" + jobName)
-		}
+	} else if _, ok := j.jobMap[jobName]; ok {
+		panic("the job had already register, job name can't be repeated:" + jobName)
 	}
+
 	j.jobMap[jobName] = beanJobFn
 }
 
-func (j *JobHandler) HasRunning(jobId int32) bool {
+// HasRunning of the jobId
+func (j *JobManager) HasRunning(jobId int32) bool {
 	qu, has := j.QueueMap[jobId]
 	if has {
 		if qu.Run > 0 || qu.Queue.HasNext() {
@@ -230,22 +242,20 @@ func (j *JobHandler) HasRunning(jobId int32) bool {
 }
 
 // PutJobToQueue push job to queue and run it.
-func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) {
+func (j *JobManager) PutJobToQueue(trigger *transport.TriggerParam) (err error) {
 	logger.Debugf("put and start job#%d, info: %#v", trigger.JobId, trigger)
 
-	qu, has := j.QueueMap[trigger.JobId] // map value是地址，读不加锁
+	jq, has := j.QueueMap[trigger.JobId] // map value是地址，读不加锁
 	if has {
-		runParam, err := qu.ParseJob(trigger)
+		runParam, err := jq.ParseJob(trigger)
 		if err != nil {
 			return err
 		}
 
-		err = qu.Queue.Put(runParam)
+		err = jq.Queue.Put(runParam)
 		if err == nil {
-			qu.StartJob()
-			return err
+			jq.StartJob()
 		}
-
 		return err
 	}
 
@@ -253,13 +263,13 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 	j.Lock()
 	defer j.Unlock()
 
-	jobQueue := &JobQueue{
+	jq = &JobQueue{
 		GlueType: trigger.GlueType,
 		JobId:    trigger.JobId,
 		Callback: j.CallbackFunc,
 	}
 
-	// switch job exec handler.
+	// switch bean job exec handler.
 	if trigger.ExecutorHandler != "" {
 		if j.jobMap == nil && len(j.jobMap) <= 0 {
 			return errors.New("bean job handler not found")
@@ -270,30 +280,30 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 			return errors.New("bean job handler not found")
 		}
 
-		jobQueue.ExecuteHandler = &BeanHandler{RunFunc: fun}
+		jq.ExecuteHandler = &BeanHandler{RunFunc: fun}
 	} else {
 		// use script handler
-		jobQueue.ExecuteHandler = &ScriptHandler{}
+		jq.ExecuteHandler = &ScriptHandler{}
 	}
 
-	runParam, err := jobQueue.ParseJob(trigger)
+	runParam, err := jq.ParseJob(trigger)
 	if err != nil {
 		return err
 	}
 
-	q := queue.NewQueue()
-	err = q.Put(runParam)
+	jq.Queue = queue.NewQueue()
+
+	err = jq.Queue.Put(runParam)
 	if err != nil {
 		return err
 	}
 
-	jobQueue.Queue = q
-	j.QueueMap[trigger.JobId] = jobQueue
-	jobQueue.StartJob()
+	j.QueueMap[trigger.JobId] = jq
+	jq.StartJob()
 	return err
 }
 
-func (j *JobHandler) cancelJob(jobId int32) {
+func (j *JobManager) cancelJob(jobId int32) {
 	jobQueue, has := j.QueueMap[jobId]
 	if has {
 		logger.Infof("the job#%d be xxl-job admin canceled", jobId)
@@ -330,7 +340,7 @@ func (j *JobHandler) cancelJob(jobId int32) {
 	}
 }
 
-func (j *JobHandler) clearJob() {
+func (j *JobManager) clearJob() {
 	j.jobMap = map[string]BeanJobRunFunc{}
 	j.QueueMap = make(map[int32]*JobQueue)
 }

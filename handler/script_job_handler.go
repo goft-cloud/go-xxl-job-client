@@ -86,13 +86,18 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jrp *JobRunPa
 	// ensure 'fullParam' key always exists.
 	inputParam["fullParam"] = trigger.ExecutorParams
 
-	jrp = &JobRunParam{
-		LogId:       trigger.LogId,
-		LogDateTime: trigger.LogDateTime,
-		JobName:     trigger.ExecutorHandler,
-		JobTag:      path,
-		InputParam:  inputParam,
-	}
+	// jrp = &JobRunParam{
+	// 	LogId:       trigger.LogId,
+	// 	LogDateTime: trigger.LogDateTime,
+	// 	JobName:     trigger.ExecutorHandler,
+	// 	JobTag:      path,
+	// 	InputParam:  inputParam,
+	// }
+
+	jrp = NewJobRunParam(trigger).WithOptionFn(func(jrp *JobRunParam) {
+		jrp.JobTag = path
+		jrp.InputParam = inputParam
+	})
 
 	if trigger.BroadcastTotal > 0 {
 		jrp.ShardIdx = trigger.BroadcastIndex

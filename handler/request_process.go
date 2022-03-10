@@ -16,7 +16,7 @@ import (
 type RequestProcess struct {
 	sync.RWMutex
 
-	JobHandler  *JobHandler
+	JobHandler  *JobManager
 	ReqHandler  RequestHandler
 	adminServer *admin.XxlAdminServer
 }
@@ -28,7 +28,7 @@ func NewRequestProcess(adminServer *admin.XxlAdminServer, handler RequestHandler
 		ReqHandler:  handler,
 	}
 
-	jobHandler := &JobHandler{
+	jobHandler := &JobManager{
 		QueueMap:     make(map[int32]*JobQueue),
 		CallbackFunc: requestHandler.jobRunCallback,
 	}
@@ -138,6 +138,7 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 							j.JobHandler.cancelJob(jobId)
 						}
 					default:
+						// collect and build trigger params from r
 						ta, err := j.ReqHandler.Run(ctx, r)
 						if err == nil {
 							go j.pushJob(ta)
@@ -158,12 +159,12 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 		}
 		bytes = e.Buffer()
 	} else {
-		bs, err := json.Marshal(&returns)
+		bytes, err = json.Marshal(&returns)
 		if err != nil {
 			return nil, err
 		}
-		bytes = bs
 	}
+
 	return bytes, nil
 }
 

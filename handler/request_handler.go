@@ -13,6 +13,7 @@ type RequestHandler interface {
 	ParseParam(ctx context.Context, r interface{}) (reqId, accessToken, methodName string, err error)
 	Beat(ctx context.Context, r interface{}) error
 	IdleBeat(ctx context.Context, r interface{}) (jobId int32, err error)
+	// Run collect and build trigger params from r
 	Run(ctx context.Context, r interface{}) (triggerParam *transport.TriggerParam, err error)
 	Kill(ctx context.Context, r interface{}) (jobId int32, err error)
 	// Log fetch job logs

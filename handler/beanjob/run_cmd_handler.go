@@ -9,7 +9,6 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/gookit/goutil/arrutil"
 	"github.com/gookit/goutil/cliutil/cmdline"
-	"github.com/gookit/goutil/dump"
 	"github.com/gookit/goutil/strutil"
 )
 
@@ -93,7 +92,7 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 	if err := cmd.Run(); err != nil {
 		_ = fh.Close() // close log file.
 
-		dump.P(err)
+		// dump.P(err)
 		errMsg := err.Error()
 		if ee, ok := err.(*exec.ExitError); ok {
 			errMsg = ee.String() + "; " + string(ee.Stderr)

@@ -10,7 +10,7 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
-// ApiCallback 执行器执行完任务后，回调任务结果时使用
+// ApiCallback 执行器执行完任务后，回调通知admin任务结果时使用
 func ApiCallback(address string, accessToken map[string]string, callbackParam []*transport.HandleCallbackParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
 	bytesData, err := json.Marshal(callbackParam)
 	if err != nil {

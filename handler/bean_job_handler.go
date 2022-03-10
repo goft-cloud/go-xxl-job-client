@@ -34,7 +34,7 @@ type BeanHandler struct {
 func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jrp *JobRunParam, err error) {
 	if b.RunFunc == nil {
 		logger.Errorf("the bean job#%d handler func not registered", trigger.JobId, trigger.LogId)
-		return jrp, errors.New("job run function not found")
+		return nil, errors.New("job run function not found")
 	}
 
 	inputParam := make(map[string]string)
@@ -43,30 +43,38 @@ func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jrp *JobRunPara
 
 	if trigger.ExecutorParams != "" {
 		params := strings.Split(trigger.ExecutorParams, "\n")
+
 		if len(params) > 0 {
 			for _, param := range params {
-				// if start with #, as comments
-				if param != "" && param[0] != '#' {
-					// jobP := strings.SplitN(param, "=", 2)
-					jobP := strutil.SplitNTrimmed(param, "=", 2)
-					if len(jobP) > 1 {
-						inputParam[jobP[0]] = jobP[1]
-					}
+				// skip empty. if start with #, as comments
+				if param == "" && param[0] == '#' {
+					continue
+				}
+
+				// jobP := strings.SplitN(param, "=", 2)
+				jobP := strutil.SplitNTrimmed(param, "=", 2)
+				if len(jobP) > 1 {
+					inputParam[jobP[0]] = jobP[1]
 				}
 			}
 		}
 	}
 
-	// funName := getFuncName(b.RunFunc)
-	funName := goutil.FuncName(b.RunFunc)
-	jrp = &JobRunParam{
-		LogId:       trigger.LogId,
-		LogDateTime: trigger.LogDateTime,
-		JobName:     trigger.ExecutorHandler,
-		JobTag:      funName,
-		InputParam:  inputParam,
-	}
-	return jrp, err
+	// jrp = &JobRunParam{
+	// 	LogId:       trigger.LogId,
+	// 	LogDateTime: trigger.LogDateTime,
+	// 	JobName:     trigger.ExecutorHandler,
+	// 	JobTag:      goutil.FuncName(b.RunFunc),
+	// 	InputParam:  inputParam,
+	// }
+
+	funcName := goutil.FuncName(b.RunFunc)
+	jrp = NewJobRunParam(trigger).WithOptionFn(func(jrp *JobRunParam) {
+		jrp.JobTag = funcName
+		jrp.InputParam = inputParam
+	})
+
+	return jrp, nil
 }
 
 // Execute bean handler func

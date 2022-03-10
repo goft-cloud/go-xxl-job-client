@@ -7,11 +7,13 @@ import (
 	"sync/atomic"
 )
 
+// Node struct
 type Node struct {
 	Item interface{}
 	Next *Node
 }
 
+// Queue struct
 type Queue struct {
 	sync.Mutex
 	Count    int32
@@ -30,6 +32,7 @@ func NewQueue() *Queue {
 	}
 }
 
+// Put item to queue
 func (q *Queue) Put(item interface{}) error {
 	if item == nil {
 		return errors.New("item can't be nil")
@@ -49,7 +52,7 @@ func (q *Queue) Put(item interface{}) error {
 	return nil
 }
 
-// 保证单协程执行，不加锁
+// Poll 保证单协程执行，不加锁
 func (q *Queue) Poll() (has bool, item interface{}) {
 	node := q.Head.Next
 	if node == nil {
