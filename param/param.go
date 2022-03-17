@@ -1,6 +1,10 @@
 package param
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/gookit/goutil/strutil"
+)
 
 // CtxJobParam struct
 type CtxJobParam struct {
@@ -21,6 +25,16 @@ type CtxJobParam struct {
 // Param get input param by name.
 func (cjp *CtxJobParam) Param(name string) string {
 	return cjp.InputParams[name]
+}
+
+// ParamInt get input int param by name.
+func (cjp *CtxJobParam) ParamInt(name string) int {
+	val, has := cjp.TryParam(name)
+	if has {
+		return strutil.MustInt(val)
+	}
+
+	return 0
 }
 
 // TryParam try to get input param by name.

@@ -45,9 +45,11 @@ func (q *Queue) Put(item interface{}) error {
 
 	q.Lock()
 	defer q.Unlock()
+
 	node := &Node{Item: item}
 	q.Last.Next = node
 	q.Last = node
+
 	atomic.AddInt32(&q.Count, 1)
 	return nil
 }
@@ -58,8 +60,10 @@ func (q *Queue) Poll() (has bool, item interface{}) {
 	if node == nil {
 		return false, nil
 	}
+
 	res := node.Item
 	node.Item = nil // help GC
+
 	q.Head = node
 	atomic.AddInt32(&q.Count, -1)
 	return true, res
@@ -69,6 +73,7 @@ func (q *Queue) Clear() {
 	q = NewQueue()
 }
 
+// HasNext check
 func (q *Queue) HasNext() bool {
 	return atomic.LoadInt32(&q.Count) > 0
 }

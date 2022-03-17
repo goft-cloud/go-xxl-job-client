@@ -126,7 +126,7 @@ func (c *XxlClient) Run() error {
 		logger.Infof("NOTICE: xxl-job go executor is DISABLED(by options.Enable=false)")
 	}
 
-	c.executor.Run(c.requestHandler.JobHandler.BeanJobLength() + 1)
+	c.executor.Run(c.requestHandler.JobManager.BeanJobLength() + 1)
 
 	return nil
 }

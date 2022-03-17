@@ -12,11 +12,20 @@ import (
 	"github.com/goft-cloud/go-xxl-job-client/v2/transport"
 )
 
+const (
+	MthRun  = "run"
+	MthLog  = "log"
+	MthKill = "kill"
+	MthBeat = "beat"
+
+	MthIdleBeat = "idleBeat"
+)
+
 // RequestProcess struct
 type RequestProcess struct {
 	sync.RWMutex
 
-	JobHandler  *JobManager
+	JobManager  *JobManager
 	ReqHandler  RequestHandler
 	adminServer *admin.XxlAdminServer
 }
@@ -28,29 +37,29 @@ func NewRequestProcess(adminServer *admin.XxlAdminServer, handler RequestHandler
 		ReqHandler:  handler,
 	}
 
-	jobHandler := &JobManager{
+	jobManager := &JobManager{
 		QueueMap:     make(map[int32]*JobQueue),
 		CallbackFunc: requestHandler.jobRunCallback,
 	}
 
-	requestHandler.JobHandler = jobHandler
+	requestHandler.JobManager = jobManager
 	return requestHandler
 }
 
 // RegisterJob to job handler manager
-func (j *RequestProcess) RegisterJob(jobName string, beanJobFn BeanJobRunFunc) {
-	j.JobHandler.RegisterJob(jobName, beanJobFn)
+func (rp *RequestProcess) RegisterJob(jobName string, beanJobFn BeanJobRunFunc) {
+	rp.JobManager.RegisterJob(jobName, beanJobFn)
 }
 
 // push job to queue and run it
-func (j *RequestProcess) pushJob(trigger *transport.TriggerParam) {
+func (rp *RequestProcess) pushJob(trigger *transport.TriggerParam) {
 	returns := transport.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
 	}
 
 	// push job to queue and run it.
-	err := j.JobHandler.PutJobToQueue(trigger)
+	err := rp.JobManager.PutJobToQueue(trigger)
 	if err != nil {
 		returns.Code = http.StatusInternalServerError
 		returns.Content = err.Error()
@@ -60,11 +69,11 @@ func (j *RequestProcess) pushJob(trigger *transport.TriggerParam) {
 			ExecuteResult: returns,
 		}
 
-		j.adminServer.CallbackAdmin([]*transport.HandleCallbackParam{callback})
+		rp.adminServer.CallbackAdmin([]*transport.HandleCallbackParam{callback})
 	}
 }
 
-func (r *RequestProcess) jobRunCallback(trigger *JobRunParam, runErr error) {
+func (rp *RequestProcess) jobRunCallback(trigger *JobRunParam, runErr error) {
 	returns := transport.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
@@ -80,11 +89,11 @@ func (r *RequestProcess) jobRunCallback(trigger *JobRunParam, runErr error) {
 		LogDateTim:    trigger.LogDateTime,
 		ExecuteResult: returns,
 	}
-	r.adminServer.CallbackAdmin([]*transport.HandleCallbackParam{callback})
+	rp.adminServer.CallbackAdmin([]*transport.HandleCallbackParam{callback})
 }
 
 // RequestProcess handle
-func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res []byte, err error) {
+func (rp *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res []byte, err error) {
 	response := transport.XxlRpcResponse{}
 	returns := transport.ReturnT{
 		Code:    http.StatusOK,
@@ -92,7 +101,7 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 	}
 
 	isOld := false
-	reqId, accessToken, methodName, err := j.ReqHandler.ParseParam(ctx, r)
+	reqId, accessToken, methodName, err := rp.ReqHandler.ParseParam(ctx, r)
 	if err != nil {
 		returns.Code = http.StatusInternalServerError
 		returns.Msg = err.Error()
@@ -106,42 +115,42 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 		}
 
 		if isContinue {
-			jt := j.adminServer.GetToken()
+			jt := rp.adminServer.GetToken()
 			if accessToken != jt {
 				returns.Code = http.StatusInternalServerError
 				returns.Msg = "access token error"
 			} else {
 				if methodName != "beat" {
-					mn := j.ReqHandler.MethodName(ctx, r)
+					mn := rp.ReqHandler.MethodName(ctx, r)
 					logger.Debugf("received server method: %s, reqId: %s", mn, reqId)
 
 					switch mn {
-					case "idleBeat":
-						jobId, err := j.ReqHandler.IdleBeat(ctx, r)
+					case MthIdleBeat:
+						jobId, err := rp.ReqHandler.IdleBeat(ctx, r)
 						if err == nil {
-							if j.JobHandler.HasRunning(jobId) {
-								returns.Content = http.StatusInternalServerError
+							if rp.JobManager.HasRunning(jobId) {
+								returns.Code = http.StatusInternalServerError
 								returns.Content = "the server busy"
 							}
 						} else {
-							returns.Content = http.StatusInternalServerError
+							returns.Code = http.StatusInternalServerError
 							returns.Content = err.Error()
 						}
-					case "log":
-						log, err := j.ReqHandler.Log(ctx, r)
+					case MthLog:
+						log, err := rp.ReqHandler.Log(ctx, r)
 						if err == nil {
 							returns.Content = log
 						}
-					case "kill":
-						jobId, err := j.ReqHandler.Kill(ctx, r)
+					case MthKill:
+						jobId, err := rp.ReqHandler.Kill(ctx, r)
 						if err == nil {
-							j.JobHandler.cancelJob(jobId)
+							rp.JobManager.cancelJob(jobId)
 						}
-					default:
-						// collect and build trigger params from r
-						ta, err := j.ReqHandler.Run(ctx, r)
+					default: // MthRun
+						// collect and build trigger params from r, then run job
+						ta, err := rp.ReqHandler.Run(ctx, r)
 						if err == nil {
-							go j.pushJob(ta)
+							go rp.pushJob(ta)
 						}
 					}
 				}
@@ -169,15 +178,15 @@ func (j *RequestProcess) RequestProcess(ctx context.Context, r interface{}) (res
 }
 
 // UnregisterExecutor form xxl-job admin server
-func (j *RequestProcess) UnregisterExecutor() {
-	j.JobHandler.clearJob()
+func (rp *RequestProcess) UnregisterExecutor() {
+	rp.JobManager.clearJob()
 
-	j.adminServer.UnregisterExecutor()
+	rp.adminServer.UnregisterExecutor()
 }
 
 // RegisterExecutor to xxl-job admin server
-func (j *RequestProcess) RegisterExecutor() {
-	j.adminServer.RegisterExecutor()
+func (rp *RequestProcess) RegisterExecutor() {
+	rp.adminServer.RegisterExecutor()
 
-	go j.adminServer.AutoRegisterJobGroup()
+	go rp.adminServer.AutoRegisterJobGroup()
 }
