@@ -4,6 +4,9 @@ xxl-job go 客户端版
 
 > 项目 Fork 自 https://github.com/feixiaobo/go-xxl-job-client
 
+- 支持了 shell, python, php, js, powershell，暂不支持动态编译的 groovy 模式。
+- 脚本模式的分片参数会作为启动脚本时的最后两个参数，用户参数按顺序位于分片参数之前。
+
 **调整变动：**
 
 - 支持自定义 job 任务日志存放目录
@@ -20,22 +23,10 @@ xxl-job go 客户端版
   - `CtxJobParam.InputParam` 也是完整参数，等于 `InputParams["fullParam"]`
   - bean job 任务参数，每行再会以 `=` 分割k-v存储到 `InputParams`
 
-## 介绍
-
-xxj-job 是一个 Java 实现的分布式任务调度平台，具体实现与使用请参考[https://github.com/xuxueli/xxl-job][1]，原版执行器亦要求 Java 平台，但公司部分项目是 golang
-开发，所以自己实现了 go 版本的执行器。
-
-## 写在前面
-
-- [我](https://github.com/feixiaobo) 所实现的 go 客户端执行器 rpc 通信采用 dubbo-go 所用的类型 Java netty 的自研通信框架 getty（请参考：[https://github.com/dubbogo/getty][4]）.
-- 整个设计实现是参考 xxl-job-core 的源码实现了 go 版本，核心在于 admin 与执行器的 rpc 通讯采用的序列化方式是 hessian2，所有借用了 apache 实现的
-  dubbo-go-hessian2（参考[https://github.com/apache/dubbo-go-hessian2][2]）。
-- 支持了 shell, python, php, js, powershell，暂不支持动态编译的 groovy 模式。
-- 脚本模式的分片参数会作为启动脚本时的最后两个参数，用户参数按顺序位于分片参数之前。
-
 ## 部署 xxl-job-admin
 
-详细步骤请参考[https://github.com/xuxueli/xxl-job][1]， 此处不再描述 admin 的部署。文档地址 https://www.xuxueli.com/xxl-job/
+xxj-job 是一个 Java 实现的分布式任务调度平台，具体实现与使用请参考[https://github.com/xuxueli/xxl-job][1] 文档。
+此处不再描述 admin 的部署，更多请看文档地址 https://www.xuxueli.com/xxl-job/
 
 ## 部署 xxl-job Go执行器
 

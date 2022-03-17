@@ -44,14 +44,16 @@ type ClientOptions struct {
 // NewClientOptions instance
 func NewClientOptions(opts ...OptionFunc) ClientOptions {
 	options := ClientOptions{
+		Enable:   true,
+		AppName:  defaultAppName,
+		Timeout:  defaultTimeout,
+		BeatTime: defaultBeatTime,
+		ShellBin: constants.ShellBash,
+		// other
+		ClientPort:  defaultPort,
+		LogBasePath: constants.LogBasePath,
 		AdminAddr:   []string{defaultAdminAddr},
 		AccessToken: "",
-		AppName:     defaultAppName,
-		ClientPort:  defaultPort,
-		Timeout:     defaultTimeout,
-		BeatTime:    defaultBeatTime,
-		ShellBin:    constants.ShellBash,
-		LogBasePath: constants.LogBasePath,
 	}
 
 	for _, o := range opts {

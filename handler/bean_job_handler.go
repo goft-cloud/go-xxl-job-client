@@ -60,15 +60,10 @@ func (b *BeanHandler) ParseJob(trigger *transport.TriggerParam) (jrp *JobRunPara
 		}
 	}
 
-	// jrp = &JobRunParam{
-	// 	LogId:       trigger.LogId,
-	// 	LogDateTime: trigger.LogDateTime,
-	// 	JobName:     trigger.ExecutorHandler,
-	// 	JobTag:      goutil.FuncName(b.RunFunc),
-	// 	InputParam:  inputParam,
-	// }
-
 	funcName := goutil.FuncName(b.RunFunc)
+	lastSlash := strings.LastIndex(funcName, "/") + 1
+	funcName = funcName[lastSlash:]
+
 	jrp = NewJobRunParam(trigger).WithOptionFn(func(jrp *JobRunParam) {
 		jrp.JobTag = funcName
 		jrp.InputParam = inputParam

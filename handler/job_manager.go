@@ -18,17 +18,18 @@ type ExecuteHandler interface {
 	Execute(jobId int32, glueType string, runParam *JobRunParam) error
 }
 
-// JobQueue struct
+// JobQueue struct.
+// a jobId => a JobQueue
 type JobQueue struct {
 	ExecuteHandler
 	// JobId value
 	JobId int32
 	Run   int32 // 0 stop, 1 run
+	Queue *queue.Queue
 	// GlueType name
 	GlueType   string
 	CurrentJob *JobRunParam
-	Queue      *queue.Queue
-	// Callback on job exec completed.
+	// Callback notify admin on job exec completed.
 	Callback func(trigger *JobRunParam, runErr error)
 }
 
@@ -40,11 +41,13 @@ func (jq *JobQueue) StopJob() bool {
 // StartJob run
 func (jq *JobQueue) StartJob() {
 	if atomic.CompareAndSwapInt32(&jq.Run, 0, 1) {
-		jq.asyRunJob()
+		jq.asyncRunJob()
+	} else {
+		logger.Error("job not started, the compare and swap JobQueue.Run fail")
 	}
 }
 
-func (jq *JobQueue) asyRunJob() {
+func (jq *JobQueue) asyncRunJob() {
 	go func() {
 		for {
 			has, node := jq.Queue.Poll()
@@ -52,6 +55,7 @@ func (jq *JobQueue) asyRunJob() {
 				jq.CurrentJob = node.(*JobRunParam)
 				jq.Callback(jq.CurrentJob, jq.Execute(jq.JobId, jq.GlueType, jq.CurrentJob))
 			} else {
+				logger.Error("pull an job node from JobQueue.Queue fail")
 				jq.StopJob()
 				break
 			}
@@ -151,15 +155,13 @@ func (jm *JobManager) PutJobToQueue(ttp *transport.TriggerParam) (err error) {
 	}
 
 	jq.Queue = queue.NewQueue()
-
-	err = jq.Queue.Put(runParam)
-	if err != nil {
+	if err = jq.Queue.Put(runParam); err != nil {
 		return err
 	}
 
 	jm.QueueMap[ttp.JobId] = jq
 	jq.StartJob()
-	return err
+	return nil
 }
 
 // cancel job run by admin kill notify

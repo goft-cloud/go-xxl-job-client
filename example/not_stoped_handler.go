@@ -2,35 +2,36 @@ package example
 
 import (
 	"context"
-	"fmt"
+	"strings"
 	"time"
 
 	xxl "github.com/goft-cloud/go-xxl-job-client/v2"
+	"github.com/goft-cloud/go-xxl-job-client/v2/example/logic"
 	"github.com/goft-cloud/go-xxl-job-client/v2/logger"
 	"github.com/gookit/goutil/dump"
 )
 
 // NotStoppedJobHandler XXL-JOB job handler 回调. 模拟一直不退出的执行
+//
+// TIP: only use for tests
 func NotStoppedJobHandler(ctx context.Context) error {
-	dump.P(xxl.GetParamObj(ctx))
-
-	logger.LogJob(ctx, "test demo job handler!!!!!")
-
-	cmd, ok := xxl.GetParam(ctx, "cmd")
-	if !ok {
-		return fmt.Errorf("param not exists: cmd")
+	cjp, err := xxl.GetParamObj(ctx)
+	if err != nil {
+		return err
 	}
+
+	dump.P(cjp)
+	logger.LogJob(ctx, "test not stopped job handler!")
 
 	for {
 		select {
 		case <-ctx.Done(): // 取出值即说明是结束信号
-			fmt.Println("收到信号，父context的协程退出,time=", time.Now().Unix())
+			logger.LogJob(ctx, "收到信号，父context的协程退出")
 			return nil
 		default:
-			time.Sleep(3 * time.Second)
-			fmt.Println("running ...")
+			time.Sleep(1 * time.Second)
+			logger.LogJob(ctx, "job running -", strings.Replace(cjp.InputParam, "\n", ", ", -1))
+			logic.Run(ctx)
 		}
 	}
-
-	return fmt.Errorf("unknown cmd, cmd=%s", cmd)
 }

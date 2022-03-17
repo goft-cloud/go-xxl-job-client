@@ -6,7 +6,9 @@ import (
 
 	getty "github.com/apache/dubbo-getty"
 	xxl "github.com/goft-cloud/go-xxl-job-client/v2"
+	"github.com/goft-cloud/go-xxl-job-client/v2/handler/beanjob"
 	"github.com/goft-cloud/go-xxl-job-client/v2/option"
+	"github.com/gookit/goutil/strutil"
 )
 
 func TestXxlClient(t *testing.T) {
@@ -17,27 +19,29 @@ func TestXxlClient(t *testing.T) {
 		// option.WithAccessToken("edqedewfrqdrfrfr"),
 		option.WithEnableHttp(true), // xxl_job v2.2之后的版本
 		option.WithClientPort(8083), // 客户端启动端口
-		option.WithAdminAddress("http://localhost:8080/xxl-job-admin"),
+		// option.WithAdminAddress("http://localhost:8080/xxl-job-admin"),
+	}
+
+	// 更多选项配置
+	admAddr := "http://localhost:8686/xxl-job-admin"
+	// var admAddr = config.String("xxl-job-addr", "")
+	clientOpts = append(clientOpts, option.WithAdminAddress(admAddr))
+
+	logPath := "./xxl-logs"
+	// var logPath = config.String("xxl-job-log-path", "")
+	if !strutil.IsBlank(logPath) {
+		clientOpts = append(clientOpts, option.WithLogBasePath(logPath))
 	}
 
 	client := xxl.NewXxlClient(clientOpts...)
-
-	// 更多选项配置
-	// var admAddr = config.String("xxl-job-addr", "")
-	// if !strutil.IsBlank(admAddr) {
-	// 	clientOpts = append(clientOpts, option.WithAdminAddress(admAddr))
-	// }
-	//
-	// var logPath = config.String("xxl-job-log-path", "")
-	// if !strutil.IsBlank(logPath) {
-	// 	clientOpts = append(clientOpts, option.WithLogBasePath(logPath))
-	// }
 
 	// set getty logger level
 	client.SetGettyLogLevel(getty.LoggerLevelInfo)
 
 	// 注册JobHandler(Bean模式任务的handler)
-	client.RegisterJob("my_job_handler", JobTest)
+	client.RegisterJob("test_job", JobTest)
+	client.RegisterJob("cmd_handler", beanjob.NewCmdHandler([]string{}))
+	client.RegisterJob("not_stopped_job", NotStoppedJobHandler)
 
 	// 启动客户端
 	// client.Run()

@@ -43,8 +43,8 @@ func (ch RunCmdHandler) Handle(ctx context.Context) error {
 		return nil
 	}
 
-	// allow limit cmd
-	if len(ch.allowCmds) > 0 && arrutil.StringsHas(ch.allowCmds, cmdName) {
+	// is not allowed cmd
+	if len(ch.allowCmds) > 0 && !arrutil.StringsHas(ch.allowCmds, cmdName) {
 		logger.LogJob(ctx, ch.BuildHelp())
 		return nil
 	}
